@@ -1,0 +1,22 @@
+Self Reflection
+What Went Well
+
+We actually got the stats affecting the combat logic perfectly.
+
+Using Vertical and Horizontal Layout Groups for the UI saved us a ton of time instead of dragging things manually.
+
+Binding the buttons directly in the C# script stopped the Unity Inspector from bugging out.
+
+What Went Wrong
+
+We forgot to add the actual Button component to the UI object at first, which caused some confusion.
+
+Overlooked the fact that going to the shop on Wave 1 with 0 gold made zero sense.
+
+Hitting the subscription limit and getting downgraded to the lower-tier AI model mid-project really sucked and slowed things down.
+
+What I Learned
+
+I definitely need to learn how to write much better and clearer prompts so we get the exact code right on the first try without going back and forth.
+
+Handling button clicks with onClick.AddListener() in the script is way safer and easier than dealing with the Unity Editor UI.
