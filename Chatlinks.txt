@@ -3,3 +3,2658 @@
 28/05/2026 after lesson  https://gemini.google.com/share/af5461107739
 
 04/06/2026 after lesson https://gemini.google.com/share/ab2f78dfba21
+
+i used claude so i will just put whole chat here 
+
+11/06/2026 after lesson 
+
+can you read every file i havre opent
+I don't have visibility into which files/tabs you currently have open in VS Code. Could you either:
+
+Select the files in the explorer and paste their paths here, or
+Tell me the file paths you'd like me to read
+Then I'll read them all for you.
+
+c:\github\Swordsandsaldalscopyai\Assets\Scripts\StatManager.cs
+C:\github\Swordsandsaldalscopyai\Assets\Scripts\StatManager.cs
+C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopManager.cs
+C:\github\Swordsandsaldalscopyai\Assets\Scripts\EnemyGladiator.cs
+C:\github\Swordsandsaldalscopyai\Assets\Scripts\GameManager.cs
+Show more
+Reading all 5 files now.
+
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\StatManager.cs
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopManager.cs
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\EnemyGladiator.cs
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\GameManager.cs
+I've read all 5 files. Here's a summary of your gladiator game:
+
+GameManager.cs — Singleton that persists across scenes. Holds player stats (vitality, strength, endurance, agility, dexterity), stat points, gold, wave number, and level/XP.
+
+StatManager.cs — Stat allocation screen. Player spends stat points across the 5 stats, then proceeds to the fight (wave 1) or shop (wave 2+). Warns if points aren't fully spent.
+
+ShopManager.cs — Between-wave shop. Sells swords (+2 strength, 50g), shields (+2 endurance, 50g), and potions (+1 vitality, 20g). Then proceeds to the fight scene.
+
+PlayerGladiator.cs — Player combat controller. Stats derived from GameManager values. Actions: attack (15 energy), heavy attack (25 energy, hit chance based on agility), defend (dodge/block based on endurance), rest (heal+energy), move left/right. On win: +2 stat points, gold reward scaled by wave.
+
+EnemyGladiator.cs — Enemy AI. Scales HP/damage by wave. Small bosses every 5 waves, big bosses every 15. Simple AI: move toward player if far, attack if close.
+
+What would you like to do with these?
+
+tamam simdi sey yapicaksin oncelikkle tum kod ingilizce olucak sadece ben sana turkce yazicam neyse googleda swords and sandals oyunu varya onun aynisini yada benzerini yapmaya calisiyorum sen her seyi yap sonra ui dan ne yapmam lazim onu soyle bugun bitmesi lazim
+Tamam, Swords and Sandals benzeri bir oyun yapacagim. Tum scriptleri basidan yaziyorum: ekipman sistemi, taunt mekanigi, kritik vurus, dusman isimleri, daha iyi AI, her sey dahil.
+
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\GameManager.cs
+107 lines
+using UnityEngine;
+
+public class GameManager : MonoBehaviour
+{
+    public static GameManager instance;
+
+    public int statPoints = 10;
+    public int currentWave = 1;
+    public int gold = 0;
+
+    public int vitality = 1;
+    public int strength = 1;
+    public int endurance = 1;
+    public int agility = 1;
+    public int dexterity = 1;
+
+    public int weaponTier = 0;
+    public int armorTier = 0;
+    public int helmetTier = 0;
+    public int shieldTier = 0;
+
+    public int healthPotions = 0;
+
+    public static readonly string[] WeaponNames = { "Fists", "Rusty Sword", "Iron Sword", "Steel Blade", "War Axe", "Obsidian Edge", "Legendary Blade" };
+    public static readonly int[] WeaponDamages = { 0, 5, 12, 20, 30, 42, 55 };
+    public static readonly int[] WeaponPrices = { 0, 40, 100, 200, 350, 550, 800 };
+
+    public static readonly string[] ArmorNames = { "Rags", "Leather Armor", "Chain Mail", "Iron Plate", "Steel Armor", "Dragon Plate" };
+    public static readonly int[] ArmorDefenses = { 0, 3, 7, 12, 18, 25 };
+    public static readonly int[] ArmorPrices = { 0, 35, 90, 180, 300, 500 };
+
+    public static readonly string[] HelmetNames = { "None", "Leather Cap", "Iron Helm", "Steel Helm", "War Helmet", "Dragon Crown" };
+    public static readonly int[] HelmetDefenses = { 0, 2, 5, 8, 12, 18 };
+    public static readonly int[] HelmetPrices = { 0, 25, 60, 130, 220, 380 };
+
+    public static readonly string[] ShieldNames = { "None", "Wooden Shield", "Iron Shield", "Steel Shield", "Tower Shield", "Dragon Shield" };
+    public static readonly int[] ShieldBlocks = { 0, 5, 10, 16, 22, 30 };
+    public static readonly int[] ShieldPrices = { 0, 30, 70, 150, 250, 420 };
+
+    public static readonly int PotionPrice = 15;
+    public static readonly int PotionHealAmount = 30;
+
+    void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (instance == this)
+            instance = null;
+    }
+
+    public int GetAttackDamage()
+    {
+        return 5 + (strength * 3) + WeaponDamages[weaponTier];
+    }
+
+    public int GetMaxHealth()
+    {
+        return 50 + (vitality * 10);
+    }
+
+    public int GetMaxEnergy()
+    {
+        return 30 + (endurance * 5);
+    }
+
+    public int GetTotalDefense()
+    {
+        return ArmorDefenses[armorTier] + HelmetDefenses[helmetTier];
+    }
+
+    public int GetBlockChance()
+    {
+        return 10 + (endurance * 2) + ShieldBlocks[shieldTier];
+    }
+
+    public int GetDodgeChance()
+    {
+        return 5 + (agility * 3);
+    }
+
+    public float GetMoveDistance()
+    {
+        return 1.0f + (dexterity * 0.15f);
+    }
+
+    public int GetCritChance()
+    {
+        return 5 + (dexterity * 2);
+    }
+
+    public int GetTauntChance()
+    {
+        return 10 + (agility * 2) + (dexterity * 2);
+    }
+}
+GameManager done. Those hints are just IDE style suggestions, no actual issues. Writing the remaining 4 files now.
+
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\StatManager.cs
+139 lines
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using System.Collections;
+
+public class StatManager : MonoBehaviour
+{
+    public TextMeshProUGUI pointsText;
+    public TextMeshProUGUI vitalityText;
+    public TextMeshProUGUI strengthText;
+    public TextMeshProUGUI enduranceText;
+    public TextMeshProUGUI agilityText;
+    public TextMeshProUGUI dexterityText;
+    public TextMeshProUGUI warningText;
+    public TextMeshProUGUI waveTitle;
+
+    public Button btnVitality;
+    public Button btnStrength;
+    public Button btnEndurance;
+    public Button btnAgility;
+    public Button btnDexterity;
+    public Button btnNext;
+
+    private Coroutine warningCoroutine;
+
+    void Start()
+    {
+        if (warningText != null)
+            warningText.gameObject.SetActive(false);
+
+        if (btnVitality != null) btnVitality.onClick.AddListener(IncreaseVitality);
+        if (btnStrength != null) btnStrength.onClick.AddListener(IncreaseStrength);
+        if (btnEndurance != null) btnEndurance.onClick.AddListener(IncreaseEndurance);
+        if (btnAgility != null) btnAgility.onClick.AddListener(IncreaseAgility);
+        if (btnDexterity != null) btnDexterity.onClick.AddListener(IncreaseDexterity);
+        if (btnNext != null) btnNext.onClick.AddListener(GoToNextScene);
+
+        if (waveTitle != null && GameManager.instance != null)
+        {
+            if (GameManager.instance.currentWave == 1)
+                waveTitle.text = "CREATE YOUR GLADIATOR";
+            else
+                waveTitle.text = "WAVE " + GameManager.instance.currentWave + " - LEVEL UP!";
+        }
+
+        UpdateUI();
+    }
+
+    public void IncreaseVitality()
+    {
+        if (GameManager.instance != null && GameManager.instance.statPoints > 0)
+        {
+            GameManager.instance.vitality++;
+            GameManager.instance.statPoints--;
+            UpdateUI();
+        }
+    }
+
+    public void IncreaseStrength()
+    {
+        if (GameManager.instance != null && GameManager.instance.statPoints > 0)
+        {
+            GameManager.instance.strength++;
+            GameManager.instance.statPoints--;
+            UpdateUI();
+        }
+    }
+
+    public void IncreaseEndurance()
+    {
+        if (GameManager.instance != null && GameManager.instance.statPoints > 0)
+        {
+            GameManager.instance.endurance++;
+            GameManager.instance.statPoints--;
+            UpdateUI();
+        }
+    }
+
+    public void IncreaseAgility()
+    {
+        if (GameManager.instance != null && GameManager.instance.statPoints > 0)
+        {
+            GameManager.instance.agility++;
+            GameManager.instance.statPoints--;
+            UpdateUI();
+        }
+    }
+
+    public void IncreaseDexterity()
+    {
+        if (GameManager.instance != null && GameManager.instance.statPoints > 0)
+        {
+            GameManager.instance.dexterity++;
+            GameManager.instance.statPoints--;
+            UpdateUI();
+        }
+    }
+
+    public void GoToNextScene()
+    {
+        if (GameManager.instance != null && GameManager.instance.statPoints == 0)
+        {
+            if (GameManager.instance.currentWave == 1)
+                SceneManager.LoadScene("SampleScene");
+            else
+                SceneManager.LoadScene("ShopScene");
+        }
+        else
+        {
+            if (warningCoroutine != null)
+                StopCoroutine(warningCoroutine);
+            if (warningText != null)
+                warningCoroutine = StartCoroutine(ShowWarning());
+        }
+    }
+
+    IEnumerator ShowWarning()
+    {
+        warningText.text = "SPEND ALL POINTS FIRST!";
+        warningText.gameObject.SetActive(true);
+        yield return new WaitForSeconds(3f);
+        warningText.gameObject.SetActive(false);
+    }
+
+    void UpdateUI()
+    {
+        if (GameManager.instance == null) return;
+
+        var gm = GameManager.instance;
+        if (pointsText != null) pointsText.text = "STAT POINTS: " + gm.statPoints;
+        if (vitalityText != null) vitalityText.text = "VITALITY: " + gm.vitality + "  (HP: " + gm.GetMaxHealth() + ")";
+        if (strengthText != null) strengthText.text = "STRENGTH: " + gm.strength + "  (ATK: " + gm.GetAttackDamage() + ")";
+        if (enduranceText != null) enduranceText.text = "ENDURANCE: " + gm.endurance + "  (EN: " + gm.GetMaxEnergy() + ")";
+        if (agilityText != null) agilityText.text = "AGILITY: " + gm.agility + "  (DODGE: " + gm.GetDodgeChance() + "%)";
+        if (dexterityText != null) dexterityText.text = "DEXTERITY: " + gm.dexterity + "  (CRIT: " + gm.GetCritChance() + "%)";
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopManager.cs
+203 lines
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+
+public class ShopManager : MonoBehaviour
+{
+    [Header("Info Texts")]
+    public TextMeshProUGUI goldText;
+    public TextMeshProUGUI messageText;
+    public TextMeshProUGUI weaponText;
+    public TextMeshProUGUI armorText;
+    public TextMeshProUGUI helmetText;
+    public TextMeshProUGUI shieldText;
+    public TextMeshProUGUI potionText;
+
+    [Header("Buttons")]
+    public Button buyWeaponButton;
+    public Button buyArmorButton;
+    public Button buyHelmetButton;
+    public Button buyShieldButton;
+    public Button buyPotionButton;
+    public Button fightButton;
+
+    void Start()
+    {
+        if (buyWeaponButton != null) buyWeaponButton.onClick.AddListener(BuyWeapon);
+        if (buyArmorButton != null) buyArmorButton.onClick.AddListener(BuyArmor);
+        if (buyHelmetButton != null) buyHelmetButton.onClick.AddListener(BuyHelmet);
+        if (buyShieldButton != null) buyShieldButton.onClick.AddListener(BuyShield);
+        if (buyPotionButton != null) buyPotionButton.onClick.AddListener(BuyPotion);
+        if (fightButton != null) fightButton.onClick.AddListener(GoToFight);
+
+        if (messageText != null) messageText.text = "WELCOME TO THE ARMORY!";
+        UpdateUI();
+    }
+
+    public void BuyWeapon()
+    {
+        if (GameManager.instance == null) return;
+        int next = GameManager.instance.weaponTier + 1;
+        if (next >= GameManager.WeaponNames.Length)
+        {
+            SetMessage("MAX WEAPON TIER!");
+            return;
+        }
+        if (GameManager.instance.gold >= GameManager.WeaponPrices[next])
+        {
+            GameManager.instance.gold -= GameManager.WeaponPrices[next];
+            GameManager.instance.weaponTier = next;
+            SetMessage("BOUGHT " + GameManager.WeaponNames[next] + "!");
+            UpdateUI();
+        }
+        else
+        {
+            SetMessage("NOT ENOUGH GOLD! NEED " + GameManager.WeaponPrices[next] + "G");
+        }
+    }
+
+    public void BuyArmor()
+    {
+        if (GameManager.instance == null) return;
+        int next = GameManager.instance.armorTier + 1;
+        if (next >= GameManager.ArmorNames.Length)
+        {
+            SetMessage("MAX ARMOR TIER!");
+            return;
+        }
+        if (GameManager.instance.gold >= GameManager.ArmorPrices[next])
+        {
+            GameManager.instance.gold -= GameManager.ArmorPrices[next];
+            GameManager.instance.armorTier = next;
+            SetMessage("BOUGHT " + GameManager.ArmorNames[next] + "!");
+            UpdateUI();
+        }
+        else
+        {
+            SetMessage("NOT ENOUGH GOLD! NEED " + GameManager.ArmorPrices[next] + "G");
+        }
+    }
+
+    public void BuyHelmet()
+    {
+        if (GameManager.instance == null) return;
+        int next = GameManager.instance.helmetTier + 1;
+        if (next >= GameManager.HelmetNames.Length)
+        {
+            SetMessage("MAX HELMET TIER!");
+            return;
+        }
+        if (GameManager.instance.gold >= GameManager.HelmetPrices[next])
+        {
+            GameManager.instance.gold -= GameManager.HelmetPrices[next];
+            GameManager.instance.helmetTier = next;
+            SetMessage("BOUGHT " + GameManager.HelmetNames[next] + "!");
+            UpdateUI();
+        }
+        else
+        {
+            SetMessage("NOT ENOUGH GOLD! NEED " + GameManager.HelmetPrices[next] + "G");
+        }
+    }
+
+    public void BuyShield()
+    {
+        if (GameManager.instance == null) return;
+        int next = GameManager.instance.shieldTier + 1;
+        if (next >= GameManager.ShieldNames.Length)
+        {
+            SetMessage("MAX SHIELD TIER!");
+            return;
+        }
+        if (GameManager.instance.gold >= GameManager.ShieldPrices[next])
+        {
+            GameManager.instance.gold -= GameManager.ShieldPrices[next];
+            GameManager.instance.shieldTier = next;
+            SetMessage("BOUGHT " + GameManager.ShieldNames[next] + "!");
+            UpdateUI();
+        }
+        else
+        {
+            SetMessage("NOT ENOUGH GOLD! NEED " + GameManager.ShieldPrices[next] + "G");
+        }
+    }
+
+    public void BuyPotion()
+    {
+        if (GameManager.instance == null) return;
+        if (GameManager.instance.gold >= GameManager.PotionPrice)
+        {
+            GameManager.instance.gold -= GameManager.PotionPrice;
+            GameManager.instance.healthPotions++;
+            SetMessage("BOUGHT HEALTH POTION!");
+            UpdateUI();
+        }
+        else
+        {
+            SetMessage("NOT ENOUGH GOLD! NEED " + GameManager.PotionPrice + "G");
+        }
+    }
+
+    public void GoToFight()
+    {
+        SceneManager.LoadScene("SampleScene");
+    }
+
+    void SetMessage(string msg)
+    {
+        if (messageText != null) messageText.text = msg;
+    }
+
+    void UpdateUI()
+    {
+        var gm = GameManager.instance;
+        if (gm == null) return;
+
+        if (goldText != null)
+            goldText.text = "GOLD: " + gm.gold;
+
+        UpdateEquipmentText(weaponText, "WEAPON", GameManager.WeaponNames, GameManager.WeaponDamages, gm.weaponTier, "DMG");
+        UpdateEquipmentText(armorText, "ARMOR", GameManager.ArmorNames, GameManager.ArmorDefenses, gm.armorTier, "DEF");
+        UpdateEquipmentText(helmetText, "HELMET", GameManager.HelmetNames, GameManager.HelmetDefenses, gm.helmetTier, "DEF");
+        UpdateEquipmentText(shieldText, "SHIELD", GameManager.ShieldNames, GameManager.ShieldBlocks, gm.shieldTier, "BLOCK");
+
+        UpdateBuyButton(buyWeaponButton, GameManager.WeaponNames, GameManager.WeaponDamages, GameManager.WeaponPrices, gm.weaponTier, "DMG");
+        UpdateBuyButton(buyArmorButton, GameManager.ArmorNames, GameManager.ArmorDefenses, GameManager.ArmorPrices, gm.armorTier, "DEF");
+        UpdateBuyButton(buyHelmetButton, GameManager.HelmetNames, GameManager.HelmetDefenses, GameManager.HelmetPrices, gm.helmetTier, "DEF");
+        UpdateBuyButton(buyShieldButton, GameManager.ShieldNames, GameManager.ShieldBlocks, GameManager.ShieldPrices, gm.shieldTier, "BLOCK");
+
+        if (potionText != null)
+            potionText.text = "POTIONS: " + gm.healthPotions + " | HEALS " + GameManager.PotionHealAmount + " HP";
+
+        if (buyPotionButton != null)
+        {
+            var t = buyPotionButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (t != null) t.text = "BUY POTION\n" + GameManager.PotionPrice + "G";
+        }
+    }
+
+    void UpdateEquipmentText(TextMeshProUGUI text, string label, string[] names, int[] values, int tier, string stat)
+    {
+        if (text == null) return;
+        text.text = label + ": " + names[tier] + " (+" + values[tier] + " " + stat + ")";
+    }
+
+    void UpdateBuyButton(Button btn, string[] names, int[] values, int[] prices, int tier, string stat)
+    {
+        if (btn == null) return;
+        var t = btn.GetComponentInChildren<TextMeshProUGUI>();
+        int next = tier + 1;
+        if (next < names.Length)
+        {
+            if (t != null) t.text = names[next] + "\n+" + values[next] + " " + stat + " | " + prices[next] + "G";
+            btn.interactable = true;
+        }
+        else
+        {
+            if (t != null) t.text = "MAX TIER";
+            btn.interactable = false;
+        }
+    }
+}
+Now the two combat scripts.
+
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+532 lines
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+
+public class PlayerGladiator : MonoBehaviour
+{
+    [Header("Player Stats")]
+    public int maxHealth;
+    public int health;
+    public int maxEnergy;
+    public int energy;
+    public int attackDamage;
+    public int defense;
+    public int blockChance;
+    public int dodgeChance;
+    public int critChance;
+    public int tauntChance;
+    public float moveDistance;
+    public int healthPotions;
+    public bool isDefending = false;
+    public bool isPlayerTurn = true;
+
+    [Header("References")]
+    public EnemyGladiator enemyGladiator;
+
+    [Header("UI Texts")]
+    public TextMeshProUGUI playerHealthText;
+    public TextMeshProUGUI playerEnergyText;
+    public TextMeshProUGUI actionLogText;
+    public TextMeshProUGUI gameOverText;
+    public TextMeshProUGUI waveText;
+    public TextMeshProUGUI distanceText;
+
+    [Header("Action Buttons")]
+    public RectTransform attackButtonTransform;
+    public RectTransform heavyAttackButtonTransform;
+    public RectTransform tauntButtonTransform;
+    public RectTransform defendButtonTransform;
+    public RectTransform moveLeftButtonTransform;
+    public RectTransform moveRightButtonTransform;
+    public RectTransform restButtonTransform;
+    public RectTransform usePotionButtonTransform;
+
+    [Header("End Buttons")]
+    public RectTransform restartButtonTransform;
+    public RectTransform nextWaveButtonTransform;
+
+    void Start()
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.color = Color.white;
+            sr.sortingOrder = 10;
+        }
+
+        transform.localScale = new Vector3(1f, 1f, 1f);
+        transform.position = new Vector3(-3f, -0.2f, 0f);
+
+        InitializeStats();
+        SetupUI();
+        UpdateUI();
+
+        int wave = GameManager.instance != null ? GameManager.instance.currentWave : 1;
+        if (waveText != null) waveText.text = "WAVE " + wave;
+        LogAction("WAVE " + wave + "! FIGHT!");
+    }
+
+    void InitializeStats()
+    {
+        if (GameManager.instance != null)
+        {
+            var gm = GameManager.instance;
+            maxHealth = gm.GetMaxHealth();
+            health = maxHealth;
+            attackDamage = gm.GetAttackDamage();
+            maxEnergy = gm.GetMaxEnergy();
+            energy = maxEnergy;
+            defense = gm.GetTotalDefense();
+            blockChance = gm.GetBlockChance();
+            dodgeChance = gm.GetDodgeChance();
+            critChance = gm.GetCritChance();
+            tauntChance = gm.GetTauntChance();
+            moveDistance = gm.GetMoveDistance();
+            healthPotions = gm.healthPotions;
+        }
+        else
+        {
+            maxHealth = 100; health = 100;
+            maxEnergy = 50; energy = 50;
+            attackDamage = 15; defense = 0;
+            blockChance = 15; dodgeChance = 10;
+            critChance = 10; tauntChance = 15;
+            moveDistance = 1.5f; healthPotions = 0;
+        }
+    }
+
+    void SetupUI()
+    {
+        Color red = new Color(0.8f, 0.15f, 0.15f);
+        Color darkRed = new Color(0.6f, 0.1f, 0.1f);
+        Color blue = new Color(0.2f, 0.4f, 0.8f);
+        Color purple = new Color(0.6f, 0.2f, 0.8f);
+        Color green = new Color(0.2f, 0.7f, 0.3f);
+        Color teal = new Color(0.2f, 0.6f, 0.6f);
+        Color yellow = new Color(1f, 0.9f, 0.2f);
+        Color orange = new Color(1f, 0.5f, 0f);
+
+        SetupButton(attackButtonTransform, "ATTACK", new Vector2(-250, -220), red, PlayerAttack);
+        SetupButton(heavyAttackButtonTransform, "HEAVY ATK", new Vector2(-85, -220), darkRed, PlayerHeavyAttack);
+        SetupButton(tauntButtonTransform, "TAUNT", new Vector2(85, -220), purple, PlayerTaunt);
+        SetupButton(defendButtonTransform, "DEFEND", new Vector2(250, -220), blue, PlayerDefend);
+
+        SetupButton(moveLeftButtonTransform, "< MOVE", new Vector2(-250, -300), teal, MoveLeft);
+        SetupButton(restButtonTransform, "REST", new Vector2(-85, -300), green, PlayerRest);
+        SetupButton(usePotionButtonTransform, "POTION x" + healthPotions, new Vector2(85, -300), green, UsePotion);
+        SetupButton(moveRightButtonTransform, "MOVE >", new Vector2(250, -300), teal, MoveRight);
+
+        if (playerHealthText != null) playerHealthText.color = new Color(0.2f, 0.9f, 0.2f);
+        if (playerEnergyText != null) playerEnergyText.color = new Color(0.2f, 0.9f, 0.9f);
+        if (actionLogText != null) actionLogText.color = new Color(1f, 0.85f, 0.3f);
+        if (distanceText != null) distanceText.color = Color.white;
+
+        if (gameOverText != null)
+            gameOverText.gameObject.SetActive(false);
+
+        if (restartButtonTransform != null)
+        {
+            restartButtonTransform.anchoredPosition = new Vector2(-120, -120);
+            restartButtonTransform.sizeDelta = new Vector2(200, 60);
+            restartButtonTransform.GetComponent<Image>().color = yellow;
+            SetButtonText(restartButtonTransform, "RESTART", 24, Color.black);
+            restartButtonTransform.gameObject.SetActive(false);
+
+            Button restartBtn = restartButtonTransform.GetComponent<Button>();
+            if (restartBtn != null) restartBtn.onClick.AddListener(RestartGame);
+        }
+
+        if (nextWaveButtonTransform != null)
+        {
+            nextWaveButtonTransform.anchoredPosition = new Vector2(120, -120);
+            nextWaveButtonTransform.sizeDelta = new Vector2(240, 60);
+            nextWaveButtonTransform.GetComponent<Image>().color = orange;
+            SetButtonText(nextWaveButtonTransform, "NEXT WAVE", 24, Color.white);
+            nextWaveButtonTransform.gameObject.SetActive(false);
+
+            Button nextBtn = nextWaveButtonTransform.GetComponent<Button>();
+            if (nextBtn != null) nextBtn.onClick.AddListener(StartNextWave);
+        }
+    }
+
+    void SetupButton(RectTransform rect, string label, Vector2 pos, Color col, UnityEngine.Events.UnityAction action)
+    {
+        if (rect == null) return;
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = new Vector2(150, 60);
+        rect.GetComponent<Image>().color = col;
+        SetButtonText(rect, label, 18, Color.white);
+
+        Button btn = rect.GetComponent<Button>();
+        if (btn != null) btn.onClick.AddListener(action);
+    }
+
+    void SetButtonText(RectTransform rect, string label, int size, Color col)
+    {
+        TextMeshProUGUI t = rect.GetComponentInChildren<TextMeshProUGUI>();
+        if (t != null)
+        {
+            t.text = label;
+            t.fontSize = size;
+            t.fontStyle = FontStyles.Bold;
+            t.color = col;
+        }
+    }
+
+    public void PlayerAttack()
+    {
+        if (!CanAct()) return;
+
+        float dist = Vector3.Distance(transform.position, enemyGladiator.transform.position);
+        if (dist > 3.5f)
+        {
+            LogAction("TOO FAR! MOVE CLOSER!");
+            return;
+        }
+
+        if (energy < 10)
+        {
+            LogAction("NOT ENOUGH ENERGY! REST!");
+            return;
+        }
+
+        energy -= 10;
+        isDefending = false;
+
+        int damage = attackDamage;
+        bool isCrit = Random.Range(0, 100) < critChance;
+        if (isCrit)
+            damage = Mathf.RoundToInt(damage * 1.5f);
+
+        enemyGladiator.TakeDamage(damage, isCrit);
+        EndTurn();
+    }
+
+    public void PlayerHeavyAttack()
+    {
+        if (!CanAct()) return;
+
+        float dist = Vector3.Distance(transform.position, enemyGladiator.transform.position);
+        if (dist > 3.5f)
+        {
+            LogAction("TOO FAR! MOVE CLOSER!");
+            return;
+        }
+
+        if (energy < 20)
+        {
+            LogAction("NOT ENOUGH ENERGY! REST!");
+            return;
+        }
+
+        energy -= 20;
+        isDefending = false;
+
+        int hitChance = 35 + (GameManager.instance != null ? GameManager.instance.agility * 2 : 0);
+        if (Random.Range(0, 100) < hitChance)
+        {
+            int damage = attackDamage * 2;
+            bool isCrit = Random.Range(0, 100) < critChance;
+            if (isCrit)
+                damage = Mathf.RoundToInt(damage * 1.5f);
+
+            LogAction("HEAVY ATTACK CONNECTS!");
+            enemyGladiator.TakeDamage(damage, isCrit);
+        }
+        else
+        {
+            LogAction("HEAVY SWING MISSES! THE CROWD BOOS!");
+        }
+        EndTurn();
+    }
+
+    public void PlayerTaunt()
+    {
+        if (!CanAct()) return;
+
+        if (energy < 5)
+        {
+            LogAction("NOT ENOUGH ENERGY!");
+            return;
+        }
+
+        energy -= 5;
+        isDefending = false;
+
+        if (Random.Range(0, 100) < tauntChance)
+        {
+            enemyGladiator.isStunned = true;
+            LogAction("THE CROWD LAUGHS! " + enemyGladiator.enemyName + " IS STUNNED!");
+        }
+        else
+        {
+            LogAction(enemyGladiator.enemyName + " IS UNIMPRESSED.");
+        }
+        EndTurn();
+    }
+
+    public void PlayerDefend()
+    {
+        if (!CanAct()) return;
+
+        if (energy < 10)
+        {
+            LogAction("NOT ENOUGH ENERGY!");
+            return;
+        }
+
+        isDefending = true;
+        energy -= 10;
+        LogAction("PLAYER TAKES A DEFENSIVE STANCE!");
+        EndTurn();
+    }
+
+    public void PlayerRest()
+    {
+        if (!CanAct()) return;
+
+        int healAmount = 5 + (GameManager.instance != null ? GameManager.instance.vitality : 0);
+        health = Mathf.Min(health + healAmount, maxHealth);
+
+        int energyGain = 20 + (GameManager.instance != null ? GameManager.instance.endurance * 2 : 0);
+        energy = Mathf.Min(energy + energyGain, maxEnergy);
+
+        isDefending = false;
+        LogAction("PLAYER RESTS. +" + healAmount + " HP, +" + energyGain + " EN");
+        EndTurn();
+    }
+
+    public void UsePotion()
+    {
+        if (!CanAct()) return;
+
+        if (healthPotions <= 0)
+        {
+            LogAction("NO POTIONS LEFT!");
+            return;
+        }
+
+        healthPotions--;
+        int heal = GameManager.PotionHealAmount;
+        health = Mathf.Min(health + heal, maxHealth);
+        isDefending = false;
+        LogAction("DRINKS POTION! +" + heal + " HP!");
+        UpdateUI();
+        EndTurn();
+    }
+
+    public void MoveLeft()
+    {
+        if (!CanAct()) return;
+
+        float newX = transform.position.x - moveDistance;
+        if (newX < -8f)
+        {
+            LogAction("ARENA WALL!");
+            return;
+        }
+
+        transform.position += new Vector3(-moveDistance, 0, 0);
+        isDefending = false;
+        LogAction("PLAYER RETREATS.");
+        EndTurn();
+    }
+
+    public void MoveRight()
+    {
+        if (!CanAct()) return;
+
+        float distToEnemy = Vector3.Distance(
+            transform.position + new Vector3(moveDistance, 0, 0),
+            enemyGladiator.transform.position
+        );
+
+        if (distToEnemy < 1.0f)
+        {
+            LogAction("TOO CLOSE!");
+            return;
+        }
+
+        transform.position += new Vector3(moveDistance, 0, 0);
+        isDefending = false;
+        LogAction("PLAYER ADVANCES.");
+        EndTurn();
+    }
+
+    bool CanAct()
+    {
+        return isPlayerTurn && health > 0 && enemyGladiator != null && enemyGladiator.health > 0;
+    }
+
+    void EndTurn()
+    {
+        if (enemyGladiator.health <= 0) return;
+
+        isPlayerTurn = false;
+        UpdateUI();
+        SetButtonsInteractable(false);
+        Invoke("StartEnemyTurn", 1.2f);
+    }
+
+    void StartEnemyTurn()
+    {
+        if (enemyGladiator != null && enemyGladiator.health > 0)
+            enemyGladiator.MakeMove();
+    }
+
+    public void OnEnemyTurnEnd()
+    {
+        if (health > 0)
+        {
+            isPlayerTurn = true;
+            SetButtonsInteractable(true);
+            LogAction("YOUR TURN.");
+            UpdateUI();
+        }
+    }
+
+    public void TakeDamage(int damage, bool wasHeavy)
+    {
+        int effectiveDodge = isDefending ? dodgeChance : dodgeChance / 3;
+        if (Random.Range(0, 100) < effectiveDodge)
+        {
+            isDefending = false;
+            LogAction("PLAYER DODGES!");
+            UpdateUI();
+            return;
+        }
+
+        if (isDefending && Random.Range(0, 100) < blockChance)
+        {
+            damage /= 2;
+            LogAction("PLAYER BLOCKS!");
+        }
+        isDefending = false;
+
+        damage = Mathf.Max(1, damage - defense);
+        health -= damage;
+
+        if (health <= 0)
+        {
+            health = 0;
+            LogAction("FATAL BLOW! -" + damage + " HP!");
+            ShowGameOver("YOU LOST!", Color.red);
+        }
+        else
+        {
+            string msg = wasHeavy ? "BRUTAL HIT! -" : "HIT! -";
+            LogAction(msg + damage + " HP!");
+        }
+        UpdateUI();
+    }
+
+    public void WinWave()
+    {
+        if (GameManager.instance != null)
+        {
+            var gm = GameManager.instance;
+            gm.healthPotions = healthPotions;
+            gm.currentWave++;
+            gm.statPoints += 3;
+
+            int rewardGold = 50 * gm.currentWave;
+            gm.gold += rewardGold;
+            LogAction("VICTORY! +3 STAT POINTS, +" + rewardGold + " GOLD!");
+        }
+        else
+        {
+            LogAction("VICTORY!");
+        }
+
+        SetButtonsActive(false);
+        if (nextWaveButtonTransform != null)
+            nextWaveButtonTransform.gameObject.SetActive(true);
+        if (restartButtonTransform != null)
+            restartButtonTransform.gameObject.SetActive(true);
+    }
+
+    public void StartNextWave()
+    {
+        SceneManager.LoadScene("StatScene");
+    }
+
+    public void LogAction(string message)
+    {
+        if (actionLogText != null)
+            actionLogText.text = message;
+    }
+
+    public void ShowGameOver(string message, Color textColor)
+    {
+        if (gameOverText != null)
+        {
+            gameOverText.text = message;
+            gameOverText.color = textColor;
+            gameOverText.gameObject.SetActive(true);
+        }
+        if (restartButtonTransform != null)
+            restartButtonTransform.gameObject.SetActive(true);
+        SetButtonsActive(false);
+    }
+
+    void SetButtonsActive(bool active)
+    {
+        if (attackButtonTransform != null) attackButtonTransform.gameObject.SetActive(active);
+        if (heavyAttackButtonTransform != null) heavyAttackButtonTransform.gameObject.SetActive(active);
+        if (tauntButtonTransform != null) tauntButtonTransform.gameObject.SetActive(active);
+        if (defendButtonTransform != null) defendButtonTransform.gameObject.SetActive(active);
+        if (moveLeftButtonTransform != null) moveLeftButtonTransform.gameObject.SetActive(active);
+        if (moveRightButtonTransform != null) moveRightButtonTransform.gameObject.SetActive(active);
+        if (restButtonTransform != null) restButtonTransform.gameObject.SetActive(active);
+        if (usePotionButtonTransform != null) usePotionButtonTransform.gameObject.SetActive(active);
+    }
+
+    void SetButtonsInteractable(bool interactable)
+    {
+        SetInteractable(attackButtonTransform, interactable);
+        SetInteractable(heavyAttackButtonTransform, interactable);
+        SetInteractable(tauntButtonTransform, interactable);
+        SetInteractable(defendButtonTransform, interactable);
+        SetInteractable(moveLeftButtonTransform, interactable);
+        SetInteractable(moveRightButtonTransform, interactable);
+        SetInteractable(restButtonTransform, interactable);
+        SetInteractable(usePotionButtonTransform, interactable);
+    }
+
+    void SetInteractable(RectTransform rect, bool val)
+    {
+        if (rect == null) return;
+        Button btn = rect.GetComponent<Button>();
+        if (btn != null) btn.interactable = val;
+    }
+
+    public void RestartGame()
+    {
+        if (GameManager.instance != null)
+            Destroy(GameManager.instance.gameObject);
+        SceneManager.LoadScene("StatScene");
+    }
+
+    public void UpdateUI()
+    {
+        if (playerHealthText != null)
+            playerHealthText.text = "HP: " + health + "/" + maxHealth;
+
+        if (playerEnergyText != null)
+            playerEnergyText.text = "EN: " + energy + "/" + maxEnergy;
+
+        if (usePotionButtonTransform != null)
+        {
+            TextMeshProUGUI t = usePotionButtonTransform.GetComponentInChildren<TextMeshProUGUI>();
+            if (t != null) t.text = "POTION x" + healthPotions;
+        }
+
+        if (distanceText != null && enemyGladiator != null)
+        {
+            float dist = Vector3.Distance(transform.position, enemyGladiator.transform.position);
+            distanceText.text = "DISTANCE: " + dist.ToString("F1");
+        }
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\EnemyGladiator.cs
+239 lines
+using UnityEngine;
+using TMPro;
+
+public class EnemyGladiator : MonoBehaviour
+{
+    [Header("Enemy Stats")]
+    public int maxHealth;
+    public int health;
+    public int attackDamage;
+    public int defense;
+    public bool isSmallBoss = false;
+    public bool isBigBoss = false;
+    public bool isDefending = false;
+    public bool isStunned = false;
+    public string enemyName;
+
+    [Header("References")]
+    public PlayerGladiator playerGladiator;
+
+    [Header("UI Texts")]
+    public TextMeshProUGUI enemyHealthText;
+    public TextMeshProUGUI enemyNameText;
+
+    static readonly string[] prefixes = {
+        "Ugly", "Mad", "Crazy", "Big", "Tiny", "Old", "Dark",
+        "Brave", "Wild", "Sneaky", "Angry", "Rusty", "Iron",
+        "Bloody", "Swift", "Lazy", "Fierce", "Smelly", "Bald"
+    };
+
+    static readonly string[] names = {
+        "Bob", "Greg", "Thor", "Brutus", "Maximus", "Felix",
+        "Ajax", "Nero", "Cassius", "Rex", "Goliath", "Blade",
+        "Hammer", "Stone", "Spike", "Grog", "Flint", "Rook"
+    };
+
+    static readonly string[] bossTitles = {
+        "The Destroyer", "The Butcher", "Death Bringer",
+        "Skull Crusher", "The Executioner", "The Impaler",
+        "Iron Fist", "Blood Storm"
+    };
+
+    static readonly string[] bigBossTitles = {
+        "TITAN OF THE ARENA", "THE IMMORTAL", "GOD OF WAR",
+        "THE ANNIHILATOR", "LORD OF BLADES", "THE COLOSSUS"
+    };
+
+    void Start()
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.color = Color.white;
+            sr.sortingOrder = 10;
+        }
+
+        int wave = GameManager.instance != null ? GameManager.instance.currentWave : 1;
+        SpawnNewEnemy(wave);
+    }
+
+    public void SpawnNewEnemy(int wave)
+    {
+        isSmallBoss = false;
+        isBigBoss = false;
+        isDefending = false;
+        isStunned = false;
+
+        maxHealth = 50 + (wave * 15);
+        attackDamage = 10 + (wave * 3);
+        defense = wave;
+
+        if (wave > 1 && wave % 15 == 0)
+        {
+            isBigBoss = true;
+            maxHealth += 250;
+            attackDamage += 25;
+            defense += 10;
+            transform.localScale = new Vector3(0.35f, 0.35f, 1f);
+            enemyName = bigBossTitles[Random.Range(0, bigBossTitles.Length)];
+        }
+        else if (wave > 1 && wave % 5 == 0)
+        {
+            isSmallBoss = true;
+            maxHealth += 100;
+            attackDamage += 10;
+            defense += 5;
+            transform.localScale = new Vector3(0.25f, 0.25f, 1f);
+            string n = names[Random.Range(0, names.Length)];
+            string t = bossTitles[Random.Range(0, bossTitles.Length)];
+            enemyName = n + " " + t;
+        }
+        else
+        {
+            transform.localScale = new Vector3(0.2f, 0.2f, 1f);
+            string p = prefixes[Random.Range(0, prefixes.Length)];
+            string n = names[Random.Range(0, names.Length)];
+            enemyName = p + " " + n;
+        }
+
+        health = maxHealth;
+        transform.position = new Vector3(3f, 0f, 0f);
+
+        if (enemyNameText != null)
+        {
+            enemyNameText.text = enemyName;
+            if (isBigBoss)
+                enemyNameText.color = new Color(1f, 0.2f, 0.2f);
+            else if (isSmallBoss)
+                enemyNameText.color = new Color(1f, 0.6f, 0.1f);
+            else
+                enemyNameText.color = Color.white;
+        }
+
+        UpdateUI();
+    }
+
+    public void MakeMove()
+    {
+        if (health <= 0 || playerGladiator.health <= 0) return;
+
+        if (isStunned)
+        {
+            isStunned = false;
+            playerGladiator.LogAction(enemyName + " IS STUNNED! SKIPS TURN!");
+            Invoke("EndEnemyTurn", 1f);
+            return;
+        }
+
+        float distance = Vector3.Distance(transform.position, playerGladiator.transform.position);
+
+        if (distance > 3.5f)
+        {
+            float step = Mathf.Min(1.5f, distance - 2.5f);
+            transform.position += new Vector3(-step, 0, 0);
+            isDefending = false;
+            playerGladiator.LogAction(enemyName + " ADVANCES!");
+        }
+        else
+        {
+            int roll = Random.Range(0, 100);
+
+            if (health < maxHealth * 0.25f && roll < 15)
+            {
+                float retreatX = transform.position.x + 1.5f;
+                if (retreatX < 8f)
+                {
+                    transform.position = new Vector3(retreatX, transform.position.y, 0);
+                    isDefending = false;
+                    playerGladiator.LogAction(enemyName + " RETREATS!");
+                }
+                else
+                {
+                    EnemyAttack();
+                }
+            }
+            else if (roll < 60)
+            {
+                EnemyAttack();
+            }
+            else if (roll < 80)
+            {
+                EnemyHeavyAttack();
+            }
+            else
+            {
+                isDefending = true;
+                playerGladiator.LogAction(enemyName + " TAKES A DEFENSIVE STANCE!");
+            }
+        }
+
+        playerGladiator.UpdateUI();
+        Invoke("EndEnemyTurn", 1f);
+    }
+
+    void EnemyAttack()
+    {
+        isDefending = false;
+        playerGladiator.LogAction(enemyName + " ATTACKS!");
+        playerGladiator.TakeDamage(attackDamage, false);
+    }
+
+    void EnemyHeavyAttack()
+    {
+        isDefending = false;
+        int heavyDamage = Mathf.RoundToInt(attackDamage * 1.5f);
+
+        if (Random.Range(0, 100) < 55)
+        {
+            playerGladiator.LogAction(enemyName + " LANDS A DEVASTATING BLOW!");
+            playerGladiator.TakeDamage(heavyDamage, true);
+        }
+        else
+        {
+            playerGladiator.LogAction(enemyName + "'S HEAVY SWING MISSES!");
+        }
+    }
+
+    void EndEnemyTurn()
+    {
+        if (playerGladiator.health > 0)
+            playerGladiator.OnEnemyTurnEnd();
+    }
+
+    public void TakeDamage(int damage, bool wasCrit)
+    {
+        if (isDefending)
+        {
+            damage /= 2;
+            isDefending = false;
+        }
+
+        damage = Mathf.Max(1, damage - defense);
+        health -= damage;
+
+        string msg = wasCrit ? "CRITICAL! " : "";
+        msg += enemyName + " TAKES " + damage + " DAMAGE!";
+
+        if (health <= 0)
+        {
+            health = 0;
+            UpdateUI();
+            playerGladiator.LogAction(enemyName + " IS DEFEATED! THE CROWD ROARS!");
+            playerGladiator.WinWave();
+            return;
+        }
+
+        playerGladiator.LogAction(msg);
+        UpdateUI();
+    }
+
+    public void UpdateUI()
+    {
+        if (enemyHealthText != null)
+        {
+            string label = isBigBoss ? "BIG BOSS" : (isSmallBoss ? "BOSS" : "ENEMY");
+            enemyHealthText.text = label + " HP: " + health + "/" + maxHealth;
+        }
+    }
+}
+Tum 5 script tamamlandi, hicbir hata yok (sadece IDE stil onerileri). Simdi Unity tarafinda ne yapman lazim onu anlatiyorum:
+
+UNITY UI KURULUM REHBERI
+1. Build Settings (File > Build Settings)
+3 scene ekle, bu sirada:
+
+StatScene (index 0 - oyun buradan baslar)
+ShopScene (index 1)
+SampleScene (index 2)
+2. StatScene (Stat Dagitim Ekrani)
+GameManager objesi:
+
+Hierarchy > Create Empty > ismi GameManager yap
+GameManager.cs scriptini ekle
+BU SADECE StatScene'DE OLMALI (DontDestroyOnLoad ile devam eder)
+Canvas olustur (UI > Canvas), icine:
+
+Obje	Tip	Ne yapar
+WaveTitle	UI > Text - TextMeshPro	"CREATE YOUR GLADIATOR" yazar
+PointsText	UI > Text - TextMeshPro	"STAT POINTS: 10" gosterir
+VitalityText	UI > Text - TextMeshPro	"VITALITY: 1 (HP: 60)"
+StrengthText	UI > Text - TextMeshPro	"STRENGTH: 1 (ATK: 8)"
+EnduranceText	UI > Text - TextMeshPro	"ENDURANCE: 1 (EN: 35)"
+AgilityText	UI > Text - TextMeshPro	"AGILITY: 1 (DODGE: 8%)"
+DexterityText	UI > Text - TextMeshPro	"DEXTERITY: 1 (CRIT: 7%)"
+WarningText	UI > Text - TextMeshPro	Kirmizi renk, uyari mesaji
+BtnVitality	UI > Button - TextMeshPro	"+VIT" butonu
+BtnStrength	UI > Button - TextMeshPro	"+STR" butonu
+BtnEndurance	UI > Button - TextMeshPro	"+END" butonu
+BtnAgility	UI > Button - TextMeshPro	"+AGI" butonu
+BtnDexterity	UI > Button - TextMeshPro	"+DEX" butonu
+BtnNext	UI > Button - TextMeshPro	"FIGHT!" / "NEXT" butonu
+StatManager objesi:
+
+Create Empty > ismi StatManager > StatManager.cs ekle
+Inspector'da tum text ve butonlari surukle-birak ile bagla
+3. ShopScene (Dukkan Ekrani)
+Canvas olustur, icine:
+
+Obje	Tip	Aciklama
+GoldText	Text - TMP	"GOLD: 150"
+MessageText	Text - TMP	"WELCOME TO THE ARMORY!"
+WeaponText	Text - TMP	"WEAPON: Fists (+0 DMG)"
+ArmorText	Text - TMP	"ARMOR: Rags (+0 DEF)"
+HelmetText	Text - TMP	"HELMET: None (+0 DEF)"
+ShieldText	Text - TMP	"SHIELD: None (+0 BLOCK)"
+PotionText	Text - TMP	"POTIONS: 0"
+BuyWeaponBtn	Button - TMP	Silah yukseltme butonu
+BuyArmorBtn	Button - TMP	Zirh yukseltme butonu
+BuyHelmetBtn	Button - TMP	Kask yukseltme butonu
+BuyShieldBtn	Button - TMP	Kalkan yukseltme butonu
+BuyPotionBtn	Button - TMP	Iksir satin alma butonu
+FightBtn	Button - TMP	"GO TO ARENA!" butonu
+ShopManager objesi:
+
+Create Empty > ShopManager.cs ekle > tum referanslari bagla
+4. SampleScene (Arena / Savas Ekrani)
+Player objesi:
+
+Create Empty > ismi Player > PlayerGladiator.cs ekle
+SpriteRenderer ekle > gladyator sprite'ini ata
+Pozisyon otomatik (-3, -0.2, 0) olacak
+Enemy objesi:
+
+Create Empty > ismi Enemy > EnemyGladiator.cs ekle
+SpriteRenderer ekle > dusman sprite'ini ata
+Pozisyon otomatik (3, 0, 0) olacak
+ONEMLI - Cross referanslar:
+
+Player'in Inspector'inda enemyGladiator alani → Enemy objesini surukle
+Enemy'nin Inspector'inda playerGladiator alani → Player objesini surukle
+Canvas olustur, icine 6 text + 10 buton:
+
+Textler:
+
+Obje	Baglanacak yer	Pozisyon onerisi
+WaveText	Player > waveText	Ust orta
+PlayerHealthText	Player > playerHealthText	Sol ust
+PlayerEnergyText	Player > playerEnergyText	Sol ust (HP altinda)
+EnemyNameText	Enemy > enemyNameText	Sag ust
+EnemyHealthText	Enemy > enemyHealthText	Sag ust (isim altinda)
+DistanceText	Player > distanceText	Ust orta
+ActionLogText	Player > actionLogText	Orta (butonlarin ustu)
+GameOverText	Player > gameOverText	Tam orta, buyuk font
+Butonlar (her biri UI > Button - TextMeshPro):
+
+Buton	Baglanacak yer	Kod pozisyonu
+AttackBtn	Player > attackButtonTransform	Sol ust satir
+HeavyAtkBtn	Player > heavyAttackButtonTransform	Orta sol ust satir
+TauntBtn	Player > tauntButtonTransform	Orta sag ust satir
+DefendBtn	Player > defendButtonTransform	Sag ust satir
+MoveLeftBtn	Player > moveLeftButtonTransform	Sol alt satir
+RestBtn	Player > restButtonTransform	Orta sol alt satir
+PotionBtn	Player > usePotionButtonTransform	Orta sag alt satir
+MoveRightBtn	Player > moveRightButtonTransform	Sag alt satir
+RestartBtn	Player > restartButtonTransform	Orta (gizli baslar)
+NextWaveBtn	Player > nextWaveButtonTransform	Orta (gizli baslar)
+Butonlarin pozisyonu, rengi ve yazisi kod tarafindan otomatik ayarlaniyor. Sen sadece butonlari olustur ve Inspector'da surukleyip birak.
+
+Oyun Akisi
+
+StatScene (stat dagit) → SampleScene (wave 1 savas)
+    ↓ kazan
+StatScene (yeni stat puanlar) → ShopScene (ekipman al) → SampleScene (wave 2)
+    ↓ kazan
+StatScene → ShopScene → SampleScene (wave 3...)
+    ↓ kaybet
+RESTART → StatScene (sifirdan basla)
+Eklenen Ozellikler (Swords & Sandals gibi)
+Taunt mekanigi (dusmani sasirt, tur atla)
+Kritik vurus (dexterity'ye bagli)
+Ekipman sistemi (7 silah, 6 zirh, 6 kask, 6 kalkan tier'i)
+Iksir sistemi (savasta kullan)
+Mesafe gostergesi (distance text)
+Rastgele dusman isimleri ("Ugly Bob", "Mad Brutus" gibi)
+Boss'lar (her 5. wave mini boss, her 15. wave buyuk boss)
+Zirh/savunma sistemi (hasari azaltir)
+Dusman AI (saldiri, agir saldiri, savunma, geri cekilme)
+Hepsini olusturup referanslari bagladigin an oyun calisacak!
+
+benim icin ui larin hepsinide kendin yapar misin elindel ne kadar geliyosa hepsini yap sana guveniyorum eger benim yapmam gereken bir sy varsa soyle
+Hepsini kodla yapiyorum. 4 yeni script olusturuyorum: UIHelper.cs (yardimci sinif), StatSceneSetup.cs, ShopSceneSetup.cs, ArenaSceneSetup.cs. Bunlar scene acildiginda tum UI'yi otomatik olusturacak. Ayrica gladyator olceklerini placeholder sprite'lara uygun hale getiriyorum.
+
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\UIHelper.cs
+104 lines
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public static class UIHelper
+{
+    public static Canvas CreateCanvas()
+    {
+        GameObject go = new GameObject("Canvas");
+        Canvas canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        CanvasScaler scaler = go.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        go.AddComponent<GraphicRaycaster>();
+
+        return canvas;
+    }
+
+    public static TextMeshProUGUI CreateText(Transform parent, string name, string content,
+        Vector2 pos, float fontSize, Color color,
+        TextAlignmentOptions align = TextAlignmentOptions.Center,
+        float width = 400, float height = 50)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = new Vector2(width, height);
+
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = content;
+        tmp.fontSize = fontSize;
+        tmp.color = color;
+        tmp.alignment = align;
+        tmp.fontStyle = FontStyles.Bold;
+
+        return tmp;
+    }
+
+    public static RectTransform CreateButton(Transform parent, string name, string label,
+        Vector2 pos, Vector2 size, Color bgColor, float fontSize = 20)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = size;
+
+        Image img = go.AddComponent<Image>();
+        img.color = bgColor;
+
+        go.AddComponent<Button>();
+
+        GameObject textGo = new GameObject("Text");
+        textGo.transform.SetParent(go.transform, false);
+
+        RectTransform textRect = textGo.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI tmp = textGo.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = fontSize;
+        tmp.color = Color.white;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontStyle = FontStyles.Bold;
+
+        return rect;
+    }
+
+    public static void CreatePanel(Transform parent, Color color)
+    {
+        GameObject go = new GameObject("Background");
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsFirstSibling();
+
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Image img = go.AddComponent<Image>();
+        img.color = color;
+    }
+
+    public static Sprite CreateSprite(Color color)
+    {
+        Texture2D tex = new Texture2D(1, 1);
+        tex.SetPixel(0, 0, color);
+        tex.Apply();
+        tex.filterMode = FilterMode.Point;
+        return Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1);
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\StatSceneSetup.cs
+120 lines
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class StatSceneSetup : MonoBehaviour
+{
+    void Awake()
+    {
+        SetupCamera();
+        EnsureEventSystem();
+        EnsureGameManager();
+        BuildUI();
+    }
+
+    void SetupCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            GameObject go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            cam = go.AddComponent<Camera>();
+        }
+        cam.orthographic = true;
+        cam.backgroundColor = new Color(0.06f, 0.05f, 0.1f);
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            GameObject go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
+        }
+    }
+
+    void EnsureGameManager()
+    {
+        if (GameManager.instance == null)
+        {
+            GameObject go = new GameObject("GameManager");
+            go.AddComponent<GameManager>();
+        }
+    }
+
+    void BuildUI()
+    {
+        Canvas canvas = UIHelper.CreateCanvas();
+        Transform ct = canvas.transform;
+
+        UIHelper.CreatePanel(ct, new Color(0.1f, 0.08f, 0.15f, 0.97f));
+
+        TextMeshProUGUI waveTitle = UIHelper.CreateText(ct, "WaveTitle", "",
+            new Vector2(0, 420), 44, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 800, 60);
+
+        TextMeshProUGUI pointsText = UIHelper.CreateText(ct, "PointsText", "",
+            new Vector2(0, 330), 34, Color.white,
+            TextAlignmentOptions.Center, 600, 50);
+
+        float statX = -120f;
+        float btnX = 320f;
+        float startY = 220f;
+        float gap = 68f;
+
+        Color vitCol = new Color(0.3f, 0.9f, 0.3f);
+        Color strCol = new Color(1f, 0.35f, 0.35f);
+        Color endCol = new Color(0.4f, 0.7f, 1f);
+        Color agiCol = new Color(1f, 1f, 0.3f);
+        Color dexCol = new Color(1f, 0.6f, 0.15f);
+
+        TextMeshProUGUI vitalityText = UIHelper.CreateText(ct, "VitalityText", "",
+            new Vector2(statX, startY), 26, vitCol, TextAlignmentOptions.Left, 500, 45);
+        TextMeshProUGUI strengthText = UIHelper.CreateText(ct, "StrengthText", "",
+            new Vector2(statX, startY - gap), 26, strCol, TextAlignmentOptions.Left, 500, 45);
+        TextMeshProUGUI enduranceText = UIHelper.CreateText(ct, "EnduranceText", "",
+            new Vector2(statX, startY - gap * 2), 26, endCol, TextAlignmentOptions.Left, 500, 45);
+        TextMeshProUGUI agilityText = UIHelper.CreateText(ct, "AgilityText", "",
+            new Vector2(statX, startY - gap * 3), 26, agiCol, TextAlignmentOptions.Left, 500, 45);
+        TextMeshProUGUI dexterityText = UIHelper.CreateText(ct, "DexterityText", "",
+            new Vector2(statX, startY - gap * 4), 26, dexCol, TextAlignmentOptions.Left, 500, 45);
+
+        TextMeshProUGUI warningText = UIHelper.CreateText(ct, "WarningText", "",
+            new Vector2(0, -140), 30, Color.red, TextAlignmentOptions.Center, 600, 50);
+
+        RectTransform btnVit = UIHelper.CreateButton(ct, "BtnVit", "+ VIT",
+            new Vector2(btnX, startY), new Vector2(130, 50), new Color(0.2f, 0.55f, 0.2f));
+        RectTransform btnStr = UIHelper.CreateButton(ct, "BtnStr", "+ STR",
+            new Vector2(btnX, startY - gap), new Vector2(130, 50), new Color(0.65f, 0.2f, 0.2f));
+        RectTransform btnEnd = UIHelper.CreateButton(ct, "BtnEnd", "+ END",
+            new Vector2(btnX, startY - gap * 2), new Vector2(130, 50), new Color(0.2f, 0.35f, 0.65f));
+        RectTransform btnAgi = UIHelper.CreateButton(ct, "BtnAgi", "+ AGI",
+            new Vector2(btnX, startY - gap * 3), new Vector2(130, 50), new Color(0.65f, 0.65f, 0.15f));
+        RectTransform btnDex = UIHelper.CreateButton(ct, "BtnDex", "+ DEX",
+            new Vector2(btnX, startY - gap * 4), new Vector2(130, 50), new Color(0.65f, 0.35f, 0f));
+
+        RectTransform btnNext = UIHelper.CreateButton(ct, "BtnNext", "FIGHT!",
+            new Vector2(0, -240), new Vector2(280, 70), new Color(0.8f, 0.15f, 0.15f), 28);
+
+        GameObject smGo = new GameObject("StatManager");
+        StatManager sm = smGo.AddComponent<StatManager>();
+        sm.waveTitle = waveTitle;
+        sm.pointsText = pointsText;
+        sm.vitalityText = vitalityText;
+        sm.strengthText = strengthText;
+        sm.enduranceText = enduranceText;
+        sm.agilityText = agilityText;
+        sm.dexterityText = dexterityText;
+        sm.warningText = warningText;
+        sm.btnVitality = btnVit.GetComponent<Button>();
+        sm.btnStrength = btnStr.GetComponent<Button>();
+        sm.btnEndurance = btnEnd.GetComponent<Button>();
+        sm.btnAgility = btnAgi.GetComponent<Button>();
+        sm.btnDexterity = btnDex.GetComponent<Button>();
+        sm.btnNext = btnNext.GetComponent<Button>();
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopSceneSetup.cs
+104 lines
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class ShopSceneSetup : MonoBehaviour
+{
+    void Awake()
+    {
+        SetupCamera();
+        EnsureEventSystem();
+        BuildUI();
+    }
+
+    void SetupCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            GameObject go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            cam = go.AddComponent<Camera>();
+        }
+        cam.orthographic = true;
+        cam.backgroundColor = new Color(0.08f, 0.06f, 0.04f);
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            GameObject go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
+        }
+    }
+
+    void BuildUI()
+    {
+        Canvas canvas = UIHelper.CreateCanvas();
+        Transform ct = canvas.transform;
+
+        UIHelper.CreatePanel(ct, new Color(0.12f, 0.09f, 0.06f, 0.97f));
+
+        TextMeshProUGUI goldText = UIHelper.CreateText(ct, "GoldText", "GOLD: 0",
+            new Vector2(0, 460), 36, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 400, 50);
+
+        TextMeshProUGUI messageText = UIHelper.CreateText(ct, "MessageText", "",
+            new Vector2(0, 390), 28, Color.white,
+            TextAlignmentOptions.Center, 700, 45);
+
+        float infoX = -220f;
+        float btnX = 330f;
+        float startY = 270f;
+        float gap = 80f;
+
+        Color infoCol = new Color(0.85f, 0.85f, 0.85f);
+
+        TextMeshProUGUI weaponText = UIHelper.CreateText(ct, "WeaponText", "",
+            new Vector2(infoX, startY), 22, infoCol, TextAlignmentOptions.Left, 500, 40);
+        TextMeshProUGUI armorText = UIHelper.CreateText(ct, "ArmorText", "",
+            new Vector2(infoX, startY - gap), 22, infoCol, TextAlignmentOptions.Left, 500, 40);
+        TextMeshProUGUI helmetText = UIHelper.CreateText(ct, "HelmetText", "",
+            new Vector2(infoX, startY - gap * 2), 22, infoCol, TextAlignmentOptions.Left, 500, 40);
+        TextMeshProUGUI shieldText = UIHelper.CreateText(ct, "ShieldText", "",
+            new Vector2(infoX, startY - gap * 3), 22, infoCol, TextAlignmentOptions.Left, 500, 40);
+        TextMeshProUGUI potionText = UIHelper.CreateText(ct, "PotionText", "",
+            new Vector2(infoX, startY - gap * 4), 22, infoCol, TextAlignmentOptions.Left, 500, 40);
+
+        Color buyCol = new Color(0.2f, 0.5f, 0.2f);
+
+        RectTransform buyWeaponBtn = UIHelper.CreateButton(ct, "BuyWeaponBtn", "BUY",
+            new Vector2(btnX, startY), new Vector2(300, 55), buyCol, 16);
+        RectTransform buyArmorBtn = UIHelper.CreateButton(ct, "BuyArmorBtn", "BUY",
+            new Vector2(btnX, startY - gap), new Vector2(300, 55), buyCol, 16);
+        RectTransform buyHelmetBtn = UIHelper.CreateButton(ct, "BuyHelmetBtn", "BUY",
+            new Vector2(btnX, startY - gap * 2), new Vector2(300, 55), buyCol, 16);
+        RectTransform buyShieldBtn = UIHelper.CreateButton(ct, "BuyShieldBtn", "BUY",
+            new Vector2(btnX, startY - gap * 3), new Vector2(300, 55), buyCol, 16);
+        RectTransform buyPotionBtn = UIHelper.CreateButton(ct, "BuyPotionBtn", "BUY POTION",
+            new Vector2(btnX, startY - gap * 4), new Vector2(300, 55), new Color(0.5f, 0.2f, 0.2f), 16);
+
+        RectTransform fightBtn = UIHelper.CreateButton(ct, "FightBtn", "GO TO ARENA!",
+            new Vector2(0, -250), new Vector2(300, 70), new Color(0.8f, 0.15f, 0.15f), 26);
+
+        GameObject shopGo = new GameObject("ShopManager");
+        ShopManager shop = shopGo.AddComponent<ShopManager>();
+        shop.goldText = goldText;
+        shop.messageText = messageText;
+        shop.weaponText = weaponText;
+        shop.armorText = armorText;
+        shop.helmetText = helmetText;
+        shop.shieldText = shieldText;
+        shop.potionText = potionText;
+        shop.buyWeaponButton = buyWeaponBtn.GetComponent<Button>();
+        shop.buyArmorButton = buyArmorBtn.GetComponent<Button>();
+        shop.buyHelmetButton = buyHelmetBtn.GetComponent<Button>();
+        shop.buyShieldButton = buyShieldBtn.GetComponent<Button>();
+        shop.buyPotionButton = buyPotionBtn.GetComponent<Button>();
+        shop.fightButton = fightBtn.GetComponent<Button>();
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\ArenaSceneSetup.cs
+175 lines
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class ArenaSceneSetup : MonoBehaviour
+{
+    void Awake()
+    {
+        SetupCamera();
+        EnsureEventSystem();
+        CreateArena();
+    }
+
+    void SetupCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            GameObject go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            cam = go.AddComponent<Camera>();
+        }
+        cam.orthographic = true;
+        cam.orthographicSize = 5;
+        cam.transform.position = new Vector3(0, 0, -10);
+        cam.backgroundColor = new Color(0.12f, 0.08f, 0.06f);
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            GameObject go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
+        }
+    }
+
+    void CreateArena()
+    {
+        // Ground
+        GameObject ground = new GameObject("Ground");
+        SpriteRenderer groundSr = ground.AddComponent<SpriteRenderer>();
+        groundSr.sprite = UIHelper.CreateSprite(new Color(0.55f, 0.4f, 0.25f));
+        groundSr.sortingOrder = 0;
+        ground.transform.position = new Vector3(0, -2.25f, 0);
+        ground.transform.localScale = new Vector3(22f, 0.5f, 1f);
+
+        // Back wall
+        GameObject wall = new GameObject("BackWall");
+        SpriteRenderer wallSr = wall.AddComponent<SpriteRenderer>();
+        wallSr.sprite = UIHelper.CreateSprite(new Color(0.3f, 0.22f, 0.15f));
+        wallSr.sortingOrder = -1;
+        wall.transform.position = new Vector3(0, 1f, 0);
+        wall.transform.localScale = new Vector3(22f, 6f, 1f);
+
+        // Player
+        GameObject playerGo = new GameObject("Player");
+        SpriteRenderer playerSr = playerGo.AddComponent<SpriteRenderer>();
+        playerSr.sprite = UIHelper.CreateSprite(new Color(0.3f, 0.5f, 0.9f));
+        playerSr.sortingOrder = 10;
+        PlayerGladiator player = playerGo.AddComponent<PlayerGladiator>();
+
+        // Enemy
+        GameObject enemyGo = new GameObject("Enemy");
+        SpriteRenderer enemySr = enemyGo.AddComponent<SpriteRenderer>();
+        enemySr.sprite = UIHelper.CreateSprite(new Color(0.9f, 0.25f, 0.2f));
+        enemySr.sortingOrder = 10;
+        EnemyGladiator enemy = enemyGo.AddComponent<EnemyGladiator>();
+
+        // Cross references
+        player.enemyGladiator = enemy;
+        enemy.playerGladiator = player;
+
+        // UI
+        Canvas canvas = UIHelper.CreateCanvas();
+        BuildCombatUI(canvas.transform, player, enemy);
+    }
+
+    void BuildCombatUI(Transform ct, PlayerGladiator player, EnemyGladiator enemy)
+    {
+        // Top info
+        TextMeshProUGUI waveText = UIHelper.CreateText(ct, "WaveText", "",
+            new Vector2(0, 490), 34, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 400, 50);
+
+        TextMeshProUGUI playerHp = UIHelper.CreateText(ct, "PlayerHP", "",
+            new Vector2(-680, 440), 26, new Color(0.2f, 0.9f, 0.2f),
+            TextAlignmentOptions.Left, 350, 40);
+
+        TextMeshProUGUI playerEn = UIHelper.CreateText(ct, "PlayerEnergy", "",
+            new Vector2(-680, 400), 22, new Color(0.2f, 0.9f, 0.9f),
+            TextAlignmentOptions.Left, 350, 40);
+
+        TextMeshProUGUI enemyName = UIHelper.CreateText(ct, "EnemyName", "",
+            new Vector2(680, 440), 26, Color.white,
+            TextAlignmentOptions.Right, 400, 40);
+
+        TextMeshProUGUI enemyHp = UIHelper.CreateText(ct, "EnemyHP", "",
+            new Vector2(680, 400), 22, new Color(1f, 0.3f, 0.3f),
+            TextAlignmentOptions.Right, 400, 40);
+
+        TextMeshProUGUI distText = UIHelper.CreateText(ct, "Distance", "",
+            new Vector2(0, 440), 22, Color.white,
+            TextAlignmentOptions.Center, 300, 40);
+
+        // Action log
+        TextMeshProUGUI actionLog = UIHelper.CreateText(ct, "ActionLog", "",
+            new Vector2(0, -150), 26, new Color(1f, 0.85f, 0.3f),
+            TextAlignmentOptions.Center, 900, 50);
+
+        // Game over text
+        TextMeshProUGUI gameOver = UIHelper.CreateText(ct, "GameOver", "",
+            new Vector2(0, -20), 52, Color.red,
+            TextAlignmentOptions.Center, 800, 70);
+
+        // Action buttons
+        Color red = new Color(0.8f, 0.15f, 0.15f);
+        Color darkRed = new Color(0.6f, 0.1f, 0.1f);
+        Color blue = new Color(0.2f, 0.4f, 0.8f);
+        Color purple = new Color(0.6f, 0.2f, 0.8f);
+        Color green = new Color(0.2f, 0.7f, 0.3f);
+        Color teal = new Color(0.2f, 0.6f, 0.6f);
+        Color yellow = new Color(1f, 0.9f, 0.2f);
+        Color orange = new Color(1f, 0.5f, 0f);
+
+        RectTransform atkBtn = UIHelper.CreateButton(ct, "AttackBtn", "ATTACK",
+            new Vector2(-250, -220), new Vector2(150, 60), red);
+        RectTransform hvyBtn = UIHelper.CreateButton(ct, "HeavyBtn", "HEAVY ATK",
+            new Vector2(-85, -220), new Vector2(150, 60), darkRed);
+        RectTransform tntBtn = UIHelper.CreateButton(ct, "TauntBtn", "TAUNT",
+            new Vector2(85, -220), new Vector2(150, 60), purple);
+        RectTransform defBtn = UIHelper.CreateButton(ct, "DefendBtn", "DEFEND",
+            new Vector2(250, -220), new Vector2(150, 60), blue);
+
+        RectTransform mlBtn = UIHelper.CreateButton(ct, "MoveLeftBtn", "< MOVE",
+            new Vector2(-250, -300), new Vector2(150, 60), teal);
+        RectTransform rstBtn = UIHelper.CreateButton(ct, "RestBtn", "REST",
+            new Vector2(-85, -300), new Vector2(150, 60), green);
+        RectTransform potBtn = UIHelper.CreateButton(ct, "PotionBtn", "POTION",
+            new Vector2(85, -300), new Vector2(150, 60), green);
+        RectTransform mrBtn = UIHelper.CreateButton(ct, "MoveRightBtn", "MOVE >",
+            new Vector2(250, -300), new Vector2(150, 60), teal);
+
+        RectTransform restartBtn = UIHelper.CreateButton(ct, "RestartBtn", "RESTART",
+            new Vector2(-120, -120), new Vector2(200, 60), yellow, 24);
+        RectTransform nextBtn = UIHelper.CreateButton(ct, "NextWaveBtn", "NEXT WAVE",
+            new Vector2(120, -120), new Vector2(240, 60), orange, 24);
+
+        // Wire player UI
+        player.playerHealthText = playerHp;
+        player.playerEnergyText = playerEn;
+        player.actionLogText = actionLog;
+        player.gameOverText = gameOver;
+        player.waveText = waveText;
+        player.distanceText = distText;
+
+        player.attackButtonTransform = atkBtn;
+        player.heavyAttackButtonTransform = hvyBtn;
+        player.tauntButtonTransform = tntBtn;
+        player.defendButtonTransform = defBtn;
+        player.moveLeftButtonTransform = mlBtn;
+        player.moveRightButtonTransform = mrBtn;
+        player.restButtonTransform = rstBtn;
+        player.usePotionButtonTransform = potBtn;
+        player.restartButtonTransform = restartBtn;
+        player.nextWaveButtonTransform = nextBtn;
+
+        // Wire enemy UI
+        enemy.enemyHealthText = enemyHp;
+        enemy.enemyNameText = enemyName;
+    }
+}
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+Edit failed
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\EnemyGladiator.cs
+Modified
+4 new files created, EnemyGladiator updated. The PlayerGladiator edit failed due to whitespace mismatch. Let me fix that.
+
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs (lines 59-68)
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+Modified
+Tum kod degisiklikleri tamamlandi. Iste tum dosyalar:
+
+Olusturulan/Guncellenen Dosyalar (9 toplam)
+Dosya	Durum
+GameManager.cs	Yeniden yazildi - ekipman + iksir sistemi
+StatManager.cs	Yeniden yazildi - stat onizleme (HP, ATK vs.)
+ShopManager.cs	Yeniden yazildi - tier bazli ekipman dukkani
+PlayerGladiator.cs	Yeniden yazildi - taunt, iksir, kritik vurus
+EnemyGladiator.cs	Yeniden yazildi - rastgele isim, akilli AI
+UIHelper.cs	YENi - UI olusturma yardimci sinifi
+StatSceneSetup.cs	YENi - Stat ekranini otomatik olusturur
+ShopSceneSetup.cs	YENi - Dukkan ekranini otomatik olusturur
+ArenaSceneSetup.cs	YENi - Arena + savascilar + UI otomatik
+Senin Yapman Gereken (Cok Az!)
+Adim 1: Scene'leri Temizle
+Her 3 scene'de (StatScene, ShopScene, SampleScene) eski objeleri sil:
+
+Eski Canvas, StatManager, ShopManager, Player, Enemy objelerini sil
+Sadece Main Camera kalsin (o da opsiyonel, script yoksa olusturur)
+Adim 2: Setup Script'lerini Ekle
+Her scene'de bir tane bos GameObject olustur ve ilgili scripti ekle:
+
+Scene	Olustur: Create Empty	Ekle: Add Component
+StatScene	_Setup	StatSceneSetup
+ShopScene	_Setup	ShopSceneSetup
+SampleScene	_Setup	ArenaSceneSetup
+Adim 3: Build Settings
+File > Build Settings > 3 scene'i ekle (zaten ekliyse dokunma):
+
+StatScene (index 0)
+ShopScene
+SampleScene
+Adim 4: TextMeshPro
+Eger daha once import etmediysen: Window > TextMeshPro > Import TMP Essential Resources
+
+Adim 5: Play!
+StatScene'i ac ve Play tusuna bas. Her sey otomatik olusacak:
+
+Stat ekraninda butonlar, textler, arka plan
+Dukkan ekraninda ekipman listeleri, fiyatlar
+Arenada mavi oyuncu, kirmizi dusman, kum zemini, tum savas butonlari
+Toplam senin isin: her scene'de 1 bos obje olustur + 1 script ekle. Geri kalan her sey (Canvas, butonlar, textler, sprite'lar, referanslar) kod tarafindan otomatik yapiliyor.
+
+Sprite'lar simdilik renkli kutular (mavi = oyuncu, kirmizi = dusman). Gercek gladyator sprite'lari bulunca SpriteRenderer'daki sprite'i degistirmen yeterli.
+
+sey son olarak assets/images te 3 tane foto var adi collassium olan arena arka plani Assets/Images/gladiator-clipart-xl.png  bu enemy gladiatorun resmi Assets/Images/pngtree-gladiator-cartoon-fighting-png-image_6671245.png buda playerin gladiatoru bunlari boyle yap ve ui daha iyi yap diger syfalarda ozellikle shopta eger buton resmi falan istiyosan indiriyim yada baska bir sey soyle onlari ekle
+Globpattern: "C:\github\Swordsandsaldalscopyai\Assets\Images\*"
+Found 6 files
+Resimlere bakiyorum.
+
+Read C:\github\Swordsandsaldalscopyai\Assets\Images\collasium.jpg
+Read C:\github\Swordsandsaldalscopyai\Assets\Images\gladiator-clipart-xl.png
+Read C:\github\Swordsandsaldalscopyai\Assets\Images\pngtree-gladiator-cartoon-fighting-png-image_6671245.png
+Guzel resimler! Arena arka plani, dusman (kilicli kalkanli gladyator), oyuncu (kirmizi sorguçlu gladyator). Simdi bunlari oyuna entegre ediyorum. Resimleri Resources klasorune kopyalayip koddan yuklemem lazim.
+
+Read C:\github\Swordsandsaldalscopyai\Assets\Images\collasium.jpg.meta
+Read C:\github\Swordsandsaldalscopyai\Assets\Images\gladiator-clipart-xl.png.meta (lines 48-62)
+Read C:\github\Swordsandsaldalscopyai\Assets\Images\pngtree-gladiator-cartoon-fighting-png-image_6671245.png.meta (lines 48-62)
+Resimleri Resources klasorune kopyalayip tum setup scriptlerini gunceliyorum - arena arka plani, gercek gladyator sprite'lari, ve daha iyi UI.
+
+Bash Copy game images to Resources folder for runtime loading
+IN
+mkdir -p "C:\github\Swordsandsaldalscopyai\Assets\Resources" && cp "C:\github\Swordsandsaldalscopyai\Assets\Images\collasium.jpg" "C:\github\Swordsandsaldalscopyai\Assets\Images\gladiator-clipart-xl.png" "C:\github\Swordsandsaldalscopyai\Assets\Images\pngtree-gladiator-cartoon-fighting-png-image_6671245.png" "C:\github\Swordsandsaldalscopyai\Assets\Resources/"
+
+OUT
+(Bash completed with no output)
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\UIHelper.cs
+128 lines
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public static class UIHelper
+{
+    public static Canvas CreateCanvas()
+    {
+        GameObject go = new GameObject("Canvas");
+        Canvas canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        CanvasScaler scaler = go.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        go.AddComponent<GraphicRaycaster>();
+
+        return canvas;
+    }
+
+    public static TextMeshProUGUI CreateText(Transform parent, string name, string content,
+        Vector2 pos, float fontSize, Color color,
+        TextAlignmentOptions align = TextAlignmentOptions.Center,
+        float width = 400, float height = 50)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = new Vector2(width, height);
+
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = content;
+        tmp.fontSize = fontSize;
+        tmp.color = color;
+        tmp.alignment = align;
+        tmp.fontStyle = FontStyles.Bold;
+
+        return tmp;
+    }
+
+    public static RectTransform CreateButton(Transform parent, string name, string label,
+        Vector2 pos, Vector2 size, Color bgColor, float fontSize = 20)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.anchoredPosition = pos;
+        rect.sizeDelta = size;
+
+        Image img = go.AddComponent<Image>();
+        img.color = bgColor;
+
+        go.AddComponent<Button>();
+
+        GameObject textGo = new GameObject("Text");
+        textGo.transform.SetParent(go.transform, false);
+
+        RectTransform textRect = textGo.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI tmp = textGo.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = fontSize;
+        tmp.color = Color.white;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontStyle = FontStyles.Bold;
+
+        return rect;
+    }
+
+    public static void CreatePanel(Transform parent, Color color)
+    {
+        GameObject go = new GameObject("Background");
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsFirstSibling();
+
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Image img = go.AddComponent<Image>();
+        img.color = color;
+    }
+
+    public static Sprite CreateSprite(Color color)
+    {
+        Texture2D tex = new Texture2D(1, 1);
+        tex.SetPixel(0, 0, color);
+        tex.Apply();
+        tex.filterMode = FilterMode.Point;
+        return Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1);
+    }
+
+    public static Sprite LoadSprite(string resourceName)
+    {
+        Texture2D tex = Resources.Load<Texture2D>(resourceName);
+        if (tex == null) return null;
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+            new Vector2(0.5f, 0.5f), tex.height);
+    }
+
+    public static void CreateArenaBackground(Camera cam, float dimAmount = 1f)
+    {
+        Sprite bgSprite = LoadSprite("collasium");
+        if (bgSprite == null) return;
+
+        GameObject bgGo = new GameObject("ArenaBackground");
+        SpriteRenderer sr = bgGo.AddComponent<SpriteRenderer>();
+        sr.sprite = bgSprite;
+        sr.sortingOrder = -10;
+        sr.color = new Color(dimAmount, dimAmount, dimAmount);
+
+        float scale = cam.orthographicSize * 2;
+        bgGo.transform.position = new Vector3(0, 0, 5);
+        bgGo.transform.localScale = new Vector3(scale, scale, 1);
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\ArenaSceneSetup.cs
+163 lines
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class ArenaSceneSetup : MonoBehaviour
+{
+    void Awake()
+    {
+        Camera cam = SetupCamera();
+        EnsureEventSystem();
+        CreateArena(cam);
+    }
+
+    Camera SetupCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            GameObject go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            cam = go.AddComponent<Camera>();
+        }
+        cam.orthographic = true;
+        cam.orthographicSize = 5;
+        cam.transform.position = new Vector3(0, 0, -10);
+        cam.backgroundColor = new Color(0.12f, 0.08f, 0.06f);
+        return cam;
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            GameObject go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
+        }
+    }
+
+    void CreateArena(Camera cam)
+    {
+        UIHelper.CreateArenaBackground(cam);
+
+        // Player
+        GameObject playerGo = new GameObject("Player");
+        SpriteRenderer playerSr = playerGo.AddComponent<SpriteRenderer>();
+        Sprite playerSprite = UIHelper.LoadSprite("pngtree-gladiator-cartoon-fighting-png-image_6671245");
+        playerSr.sprite = playerSprite != null ? playerSprite : UIHelper.CreateSprite(new Color(0.3f, 0.5f, 0.9f));
+        playerSr.sortingOrder = 10;
+        PlayerGladiator player = playerGo.AddComponent<PlayerGladiator>();
+
+        // Enemy
+        GameObject enemyGo = new GameObject("Enemy");
+        SpriteRenderer enemySr = enemyGo.AddComponent<SpriteRenderer>();
+        Sprite enemySprite = UIHelper.LoadSprite("gladiator-clipart-xl");
+        enemySr.sprite = enemySprite != null ? enemySprite : UIHelper.CreateSprite(new Color(0.9f, 0.25f, 0.2f));
+        enemySr.sortingOrder = 10;
+        EnemyGladiator enemy = enemyGo.AddComponent<EnemyGladiator>();
+
+        player.enemyGladiator = enemy;
+        enemy.playerGladiator = player;
+
+        Canvas canvas = UIHelper.CreateCanvas();
+        BuildCombatUI(canvas.transform, player, enemy);
+    }
+
+    void BuildCombatUI(Transform ct, PlayerGladiator player, EnemyGladiator enemy)
+    {
+        // Top bar
+        TextMeshProUGUI waveText = UIHelper.CreateText(ct, "WaveText", "",
+            new Vector2(0, 490), 36, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 500, 50);
+
+        TextMeshProUGUI playerHp = UIHelper.CreateText(ct, "PlayerHP", "",
+            new Vector2(-700, 445), 28, new Color(0.2f, 0.9f, 0.2f),
+            TextAlignmentOptions.Left, 380, 40);
+
+        TextMeshProUGUI playerEn = UIHelper.CreateText(ct, "PlayerEnergy", "",
+            new Vector2(-700, 405), 24, new Color(0.2f, 0.9f, 0.9f),
+            TextAlignmentOptions.Left, 380, 40);
+
+        TextMeshProUGUI enemyName = UIHelper.CreateText(ct, "EnemyName", "",
+            new Vector2(700, 445), 28, Color.white,
+            TextAlignmentOptions.Right, 420, 40);
+
+        TextMeshProUGUI enemyHp = UIHelper.CreateText(ct, "EnemyHP", "",
+            new Vector2(700, 405), 24, new Color(1f, 0.3f, 0.3f),
+            TextAlignmentOptions.Right, 420, 40);
+
+        TextMeshProUGUI distText = UIHelper.CreateText(ct, "Distance", "",
+            new Vector2(0, 440), 22, new Color(0.9f, 0.9f, 0.9f),
+            TextAlignmentOptions.Center, 300, 40);
+
+        // Action log
+        TextMeshProUGUI actionLog = UIHelper.CreateText(ct, "ActionLog", "",
+            new Vector2(0, -150), 28, new Color(1f, 0.9f, 0.3f),
+            TextAlignmentOptions.Center, 900, 55);
+
+        // Game over
+        TextMeshProUGUI gameOver = UIHelper.CreateText(ct, "GameOver", "",
+            new Vector2(0, 0), 58, Color.red,
+            TextAlignmentOptions.Center, 800, 80);
+
+        // Action buttons - Row 1
+        Color red = new Color(0.75f, 0.12f, 0.12f);
+        Color darkRed = new Color(0.55f, 0.08f, 0.08f);
+        Color blue = new Color(0.15f, 0.35f, 0.75f);
+        Color purple = new Color(0.55f, 0.15f, 0.75f);
+        Color green = new Color(0.15f, 0.6f, 0.25f);
+        Color teal = new Color(0.15f, 0.5f, 0.55f);
+        Color yellow = new Color(0.95f, 0.85f, 0.15f);
+        Color orange = new Color(0.95f, 0.5f, 0.05f);
+
+        RectTransform atkBtn = UIHelper.CreateButton(ct, "AttackBtn", "ATTACK",
+            new Vector2(-250, -220), new Vector2(155, 62), red);
+        RectTransform hvyBtn = UIHelper.CreateButton(ct, "HeavyBtn", "HEAVY ATK",
+            new Vector2(-85, -220), new Vector2(155, 62), darkRed);
+        RectTransform tntBtn = UIHelper.CreateButton(ct, "TauntBtn", "TAUNT",
+            new Vector2(85, -220), new Vector2(155, 62), purple);
+        RectTransform defBtn = UIHelper.CreateButton(ct, "DefendBtn", "DEFEND",
+            new Vector2(250, -220), new Vector2(155, 62), blue);
+
+        // Row 2
+        RectTransform mlBtn = UIHelper.CreateButton(ct, "MoveLeftBtn", "< MOVE",
+            new Vector2(-250, -300), new Vector2(155, 62), teal);
+        RectTransform rstBtn = UIHelper.CreateButton(ct, "RestBtn", "REST",
+            new Vector2(-85, -300), new Vector2(155, 62), green);
+        RectTransform potBtn = UIHelper.CreateButton(ct, "PotionBtn", "POTION",
+            new Vector2(85, -300), new Vector2(155, 62), green);
+        RectTransform mrBtn = UIHelper.CreateButton(ct, "MoveRightBtn", "MOVE >",
+            new Vector2(250, -300), new Vector2(155, 62), teal);
+
+        // End buttons
+        RectTransform restartBtn = UIHelper.CreateButton(ct, "RestartBtn", "RESTART",
+            new Vector2(-130, -100), new Vector2(220, 65), yellow, 24);
+        RectTransform nextBtn = UIHelper.CreateButton(ct, "NextWaveBtn", "NEXT WAVE",
+            new Vector2(130, -100), new Vector2(250, 65), orange, 24);
+
+        // Wire player
+        player.playerHealthText = playerHp;
+        player.playerEnergyText = playerEn;
+        player.actionLogText = actionLog;
+        player.gameOverText = gameOver;
+        player.waveText = waveText;
+        player.distanceText = distText;
+        player.attackButtonTransform = atkBtn;
+        player.heavyAttackButtonTransform = hvyBtn;
+        player.tauntButtonTransform = tntBtn;
+        player.defendButtonTransform = defBtn;
+        player.moveLeftButtonTransform = mlBtn;
+        player.moveRightButtonTransform = mrBtn;
+        player.restButtonTransform = rstBtn;
+        player.usePotionButtonTransform = potBtn;
+        player.restartButtonTransform = restartBtn;
+        player.nextWaveButtonTransform = nextBtn;
+
+        // Wire enemy
+        enemy.enemyHealthText = enemyHp;
+        enemy.enemyNameText = enemyName;
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\StatSceneSetup.cs
+138 lines
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class StatSceneSetup : MonoBehaviour
+{
+    void Awake()
+    {
+        Camera cam = SetupCamera();
+        EnsureEventSystem();
+        EnsureGameManager();
+        UIHelper.CreateArenaBackground(cam, 0.35f);
+        BuildUI();
+    }
+
+    Camera SetupCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            GameObject go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            cam = go.AddComponent<Camera>();
+        }
+        cam.orthographic = true;
+        cam.orthographicSize = 5;
+        cam.transform.position = new Vector3(0, 0, -10);
+        cam.backgroundColor = new Color(0.05f, 0.04f, 0.08f);
+        return cam;
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            GameObject go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
+        }
+    }
+
+    void EnsureGameManager()
+    {
+        if (GameManager.instance == null)
+        {
+            GameObject go = new GameObject("GameManager");
+            go.AddComponent<GameManager>();
+        }
+    }
+
+    void BuildUI()
+    {
+        Canvas canvas = UIHelper.CreateCanvas();
+        Transform ct = canvas.transform;
+
+        UIHelper.CreatePanel(ct, new Color(0, 0, 0, 0.65f));
+
+        // Title
+        TextMeshProUGUI waveTitle = UIHelper.CreateText(ct, "WaveTitle", "",
+            new Vector2(0, 430), 46, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 800, 65);
+
+        // Points
+        TextMeshProUGUI pointsText = UIHelper.CreateText(ct, "PointsText", "",
+            new Vector2(0, 340), 36, Color.white,
+            TextAlignmentOptions.Center, 600, 55);
+
+        // Stats
+        float statX = -130f;
+        float btnX = 330f;
+        float startY = 230f;
+        float gap = 65f;
+
+        Color vitCol = new Color(0.3f, 0.95f, 0.3f);
+        Color strCol = new Color(1f, 0.4f, 0.4f);
+        Color endCol = new Color(0.45f, 0.75f, 1f);
+        Color agiCol = new Color(1f, 1f, 0.35f);
+        Color dexCol = new Color(1f, 0.65f, 0.2f);
+
+        TextMeshProUGUI vitalityText = UIHelper.CreateText(ct, "VitalityText", "",
+            new Vector2(statX, startY), 27, vitCol, TextAlignmentOptions.Left, 520, 45);
+        TextMeshProUGUI strengthText = UIHelper.CreateText(ct, "StrengthText", "",
+            new Vector2(statX, startY - gap), 27, strCol, TextAlignmentOptions.Left, 520, 45);
+        TextMeshProUGUI enduranceText = UIHelper.CreateText(ct, "EnduranceText", "",
+            new Vector2(statX, startY - gap * 2), 27, endCol, TextAlignmentOptions.Left, 520, 45);
+        TextMeshProUGUI agilityText = UIHelper.CreateText(ct, "AgilityText", "",
+            new Vector2(statX, startY - gap * 3), 27, agiCol, TextAlignmentOptions.Left, 520, 45);
+        TextMeshProUGUI dexterityText = UIHelper.CreateText(ct, "DexterityText", "",
+            new Vector2(statX, startY - gap * 4), 27, dexCol, TextAlignmentOptions.Left, 520, 45);
+
+        // Warning
+        TextMeshProUGUI warningText = UIHelper.CreateText(ct, "WarningText", "",
+            new Vector2(0, -130), 32, new Color(1f, 0.2f, 0.2f),
+            TextAlignmentOptions.Center, 700, 50);
+
+        // Stat buttons
+        Color btnVitCol = new Color(0.18f, 0.5f, 0.18f);
+        Color btnStrCol = new Color(0.6f, 0.15f, 0.15f);
+        Color btnEndCol = new Color(0.15f, 0.3f, 0.6f);
+        Color btnAgiCol = new Color(0.6f, 0.6f, 0.12f);
+        Color btnDexCol = new Color(0.6f, 0.32f, 0f);
+
+        RectTransform btnVit = UIHelper.CreateButton(ct, "BtnVit", "+ VIT",
+            new Vector2(btnX, startY), new Vector2(140, 52), btnVitCol, 22);
+        RectTransform btnStr = UIHelper.CreateButton(ct, "BtnStr", "+ STR",
+            new Vector2(btnX, startY - gap), new Vector2(140, 52), btnStrCol, 22);
+        RectTransform btnEnd = UIHelper.CreateButton(ct, "BtnEnd", "+ END",
+            new Vector2(btnX, startY - gap * 2), new Vector2(140, 52), btnEndCol, 22);
+        RectTransform btnAgi = UIHelper.CreateButton(ct, "BtnAgi", "+ AGI",
+            new Vector2(btnX, startY - gap * 3), new Vector2(140, 52), btnAgiCol, 22);
+        RectTransform btnDex = UIHelper.CreateButton(ct, "BtnDex", "+ DEX",
+            new Vector2(btnX, startY - gap * 4), new Vector2(140, 52), btnDexCol, 22);
+
+        // Fight button
+        RectTransform btnNext = UIHelper.CreateButton(ct, "BtnNext", "FIGHT!",
+            new Vector2(0, -230), new Vector2(300, 75), new Color(0.75f, 0.12f, 0.12f), 30);
+
+        // StatManager
+        GameObject smGo = new GameObject("StatManager");
+        StatManager sm = smGo.AddComponent<StatManager>();
+        sm.waveTitle = waveTitle;
+        sm.pointsText = pointsText;
+        sm.vitalityText = vitalityText;
+        sm.strengthText = strengthText;
+        sm.enduranceText = enduranceText;
+        sm.agilityText = agilityText;
+        sm.dexterityText = dexterityText;
+        sm.warningText = warningText;
+        sm.btnVitality = btnVit.GetComponent<Button>();
+        sm.btnStrength = btnStr.GetComponent<Button>();
+        sm.btnEndurance = btnEnd.GetComponent<Button>();
+        sm.btnAgility = btnAgi.GetComponent<Button>();
+        sm.btnDexterity = btnDex.GetComponent<Button>();
+        sm.btnNext = btnNext.GetComponent<Button>();
+    }
+}
+Write C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopSceneSetup.cs
+150 lines
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class ShopSceneSetup : MonoBehaviour
+{
+    void Awake()
+    {
+        Camera cam = SetupCamera();
+        EnsureEventSystem();
+        UIHelper.CreateArenaBackground(cam, 0.3f);
+        BuildUI();
+    }
+
+    Camera SetupCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            GameObject go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            cam = go.AddComponent<Camera>();
+        }
+        cam.orthographic = true;
+        cam.orthographicSize = 5;
+        cam.transform.position = new Vector3(0, 0, -10);
+        cam.backgroundColor = new Color(0.06f, 0.04f, 0.03f);
+        return cam;
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            GameObject go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
+        }
+    }
+
+    void BuildUI()
+    {
+        Canvas canvas = UIHelper.CreateCanvas();
+        Transform ct = canvas.transform;
+
+        UIHelper.CreatePanel(ct, new Color(0, 0, 0, 0.7f));
+
+        // Title
+        UIHelper.CreateText(ct, "Title", "THE ARMORY",
+            new Vector2(0, 480), 42, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 600, 55);
+
+        // Gold
+        TextMeshProUGUI goldText = UIHelper.CreateText(ct, "GoldText", "",
+            new Vector2(0, 420), 34, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Center, 400, 45);
+
+        // Message
+        TextMeshProUGUI messageText = UIHelper.CreateText(ct, "MessageText", "",
+            new Vector2(0, 370), 24, new Color(0.9f, 0.9f, 0.9f),
+            TextAlignmentOptions.Center, 700, 40);
+
+        // Category layout
+        float infoX = -230f;
+        float btnX = 340f;
+        float startY = 290f;
+        float gap = 72f;
+
+        Color headerWeapon = new Color(1f, 0.4f, 0.35f);
+        Color headerArmor = new Color(0.4f, 0.65f, 1f);
+        Color headerHelmet = new Color(0.4f, 0.9f, 0.9f);
+        Color headerShield = new Color(0.4f, 0.9f, 0.4f);
+        Color headerPotion = new Color(0.85f, 0.4f, 0.85f);
+        Color infoCol = new Color(0.85f, 0.85f, 0.85f);
+
+        // Weapon
+        UIHelper.CreateText(ct, "WeaponHeader", "WEAPON",
+            new Vector2(-420, startY + 12), 16, headerWeapon,
+            TextAlignmentOptions.Left, 120, 25);
+        TextMeshProUGUI weaponText = UIHelper.CreateText(ct, "WeaponText", "",
+            new Vector2(infoX, startY), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
+        RectTransform buyWeaponBtn = UIHelper.CreateButton(ct, "BuyWeaponBtn", "",
+            new Vector2(btnX, startY), new Vector2(320, 52), new Color(0.55f, 0.18f, 0.15f), 15);
+
+        // Armor
+        UIHelper.CreateText(ct, "ArmorHeader", "ARMOR",
+            new Vector2(-420, startY - gap + 12), 16, headerArmor,
+            TextAlignmentOptions.Left, 120, 25);
+        TextMeshProUGUI armorText = UIHelper.CreateText(ct, "ArmorText", "",
+            new Vector2(infoX, startY - gap), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
+        RectTransform buyArmorBtn = UIHelper.CreateButton(ct, "BuyArmorBtn", "",
+            new Vector2(btnX, startY - gap), new Vector2(320, 52), new Color(0.15f, 0.3f, 0.55f), 15);
+
+        // Helmet
+        UIHelper.CreateText(ct, "HelmetHeader", "HELMET",
+            new Vector2(-420, startY - gap * 2 + 12), 16, headerHelmet,
+            TextAlignmentOptions.Left, 120, 25);
+        TextMeshProUGUI helmetText = UIHelper.CreateText(ct, "HelmetText", "",
+            new Vector2(infoX, startY - gap * 2), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
+        RectTransform buyHelmetBtn = UIHelper.CreateButton(ct, "BuyHelmetBtn", "",
+            new Vector2(btnX, startY - gap * 2), new Vector2(320, 52), new Color(0.15f, 0.45f, 0.5f), 15);
+
+        // Shield
+        UIHelper.CreateText(ct, "ShieldHeader", "SHIELD",
+            new Vector2(-420, startY - gap * 3 + 12), 16, headerShield,
+            TextAlignmentOptions.Left, 120, 25);
+        TextMeshProUGUI shieldText = UIHelper.CreateText(ct, "ShieldText", "",
+            new Vector2(infoX, startY - gap * 3), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
+        RectTransform buyShieldBtn = UIHelper.CreateButton(ct, "BuyShieldBtn", "",
+            new Vector2(btnX, startY - gap * 3), new Vector2(320, 52), new Color(0.15f, 0.45f, 0.2f), 15);
+
+        // Potion
+        UIHelper.CreateText(ct, "PotionHeader", "POTION",
+            new Vector2(-420, startY - gap * 4 + 12), 16, headerPotion,
+            TextAlignmentOptions.Left, 120, 25);
+        TextMeshProUGUI potionText = UIHelper.CreateText(ct, "PotionText", "",
+            new Vector2(infoX, startY - gap * 4), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
+        RectTransform buyPotionBtn = UIHelper.CreateButton(ct, "BuyPotionBtn", "",
+            new Vector2(btnX, startY - gap * 4), new Vector2(320, 52), new Color(0.45f, 0.15f, 0.45f), 15);
+
+        // Stats preview
+        TextMeshProUGUI statsPreviewText = UIHelper.CreateText(ct, "StatsPreview", "",
+            new Vector2(0, -140), 20, new Color(0.7f, 0.7f, 0.7f),
+            TextAlignmentOptions.Center, 900, 40);
+
+        // Fight button
+        RectTransform fightBtn = UIHelper.CreateButton(ct, "FightBtn", "GO TO ARENA!",
+            new Vector2(0, -230), new Vector2(320, 75), new Color(0.75f, 0.12f, 0.12f), 28);
+
+        // ShopManager
+        GameObject shopGo = new GameObject("ShopManager");
+        ShopManager shop = shopGo.AddComponent<ShopManager>();
+        shop.goldText = goldText;
+        shop.messageText = messageText;
+        shop.weaponText = weaponText;
+        shop.armorText = armorText;
+        shop.helmetText = helmetText;
+        shop.shieldText = shieldText;
+        shop.potionText = potionText;
+        shop.statsPreviewText = statsPreviewText;
+        shop.buyWeaponButton = buyWeaponBtn.GetComponent<Button>();
+        shop.buyArmorButton = buyArmorBtn.GetComponent<Button>();
+        shop.buyHelmetButton = buyHelmetBtn.GetComponent<Button>();
+        shop.buyShieldButton = buyShieldBtn.GetComponent<Button>();
+        shop.buyPotionButton = buyPotionBtn.GetComponent<Button>();
+        shop.fightButton = fightBtn.GetComponent<Button>();
+    }
+}
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+Modified
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopManager.cs
+Added 1 line
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\ShopManager.cs
+Added 8 lines
+Her sey tamamlandi. Resimlerin Resources'a kopyalandigini dogrulayayim.
+
+Globpattern: "C:\github\Swordsandsaldalscopyai\Assets\Resources\*"
+Found 3 files
+3 resim de Resources klasorunde. Tum degisiklikler tamamlandi. Iste ozet:
+
+Yapilan Degisiklikler
+Resimler
+Arena arka plani (collasium.jpg) → Tum 3 scene'de kullaniliyor
+Arena scene: tam parlaklik
+Stat/Shop scene: karanlik filtreli (atmosferik arka plan)
+Oyuncu sprite (pngtree gladiator) → Kirmizi sorguçlu gladyator, saga bakiyor
+Dusman sprite (gladiator-clipart-xl) → Kilicli gladyator, sola bakiyor
+Resimler bulunamazsa otomatik renkli kare fallback
+UI Iyilestirmeleri
+Stat Scene: Arena arka plan + karanlik panel, daha buyuk fontlar, renkli stat butonlari
+Shop Scene: Arena arka plan, kategori baslik renkleri (kirmizi=silah, mavi=zirh, cyan=kask, yesil=kalkan, mor=iksir), altta "YOUR STATS" onizlemesi
+Arena Scene: Gercek arena arka plani, gercek gladyator sprite'lari, daha buyuk butonlar
+Senin Yapman Gereken (Ayni)
+Her scene'de eski objeleri sil (Canvas, Player, Enemy, Manager'lar)
+Her scene'de 1 bos GameObject olustur ve setup scriptini ekle:
+StatScene → StatSceneSetup
+ShopScene → ShopSceneSetup
+SampleScene → ArenaSceneSetup
+Unity acilinca Resources klasorundeki 3 resmi sec → Inspector'da Texture Type: "Sprite (2D and UI)" yaptigina emin ol (muhtemelen zaten oyle)
+Play!
+Buton resmi falan indirmene gerek yok - butonlar kod icinde renkli paneller olarak olusturuluyor ve gayet iyi gorunuyor. Ekstra resim gerekmiyor!
+
+/compact
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+sey yapsana oncelikle player gladiatoru dondurmussun geriye bakiyo onu normal yap saga baksin ondan sonra butonlari biraz daha assagiya koy savas yaparken ve textlere background ekle yoksa cok zor oluyor gormesi spn olarakda o an ne oldugunu gosteren yaziyi daha yukariya koy suan gladiatorlerin ustune geliyor kotu gozukuyor sadece bunu yap simdilik
+Anladim, 4 degisiklik yapacagim: oyuncu yonu, butonlar asagi, textlere arka plan, action log yukari.
+
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+Read C:\github\Swordsandsaldalscopyai\Assets\Scripts\UIHelper.cs
+Oncelikle UIHelper'a arka planli text metodu ekleyecegim, sonra ArenaSceneSetup ve PlayerGladiator'u guncelleyecegim.
+
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+Modified
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\UIHelper.cs
+Added 17 lines
+Simdi ArenaSceneSetup'i guncelliyorum - textlere arka plan, butonlar asagi, action log yukari.
+
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\ArenaSceneSetup.cs
+Modified
+Tamamlandi. Yapilan degisiklikler:
+
+Oyuncu yonu duzeltildi — localScale.x artik 1.5f (eskiden -1.5f), saga bakiyor
+Butonlar asagi tasindi — Row 1: y=-220 → y=-340, Row 2: y=-300 → y=-415, End butonlari: y=-100 → y=-200
+Tum textlere siyah arka plan eklendi — CreateTextWithBG metodu yarattim, yari saydam siyah kutu koyuyor her textin arkasina
+Action log yukari tasindi — y=-150 → y=340, artik gladyatorlerin ustunde gorunuyor
+
+image.png
+480×301
+c:\github\Swordsandsaldalscopyai\Assets\Scripts\PlayerGladiator.cs
+opakligini neredeyse kapat yani arka plani gormeye gerek yok daha karanlik olsun bide butonlarin arkasinda degil bak goruyo musun butonlarinda arka planinda olsun %3 token kaldi onlar bitmeden yap
+Text arka planlarini cok koyu yapiyorum ve butonlara da arka plan ekliyorum.
+
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\ArenaSceneSetup.cs
+Modified
+Simdi butonlarin arkasina da koyu panel ekliyorum.
+
+Edit C:\github\Swordsandsaldalscopyai\Assets\Scripts\ArenaSceneSetup.cs
+Added 10 lines
+Tamamlandi:
+
+Text arka planlari ~%90 opak (neredeyse tamamen siyah)
+Butonlarin arkasina ekranin altina tam genislikte koyu panel eklendi (%88 opak
