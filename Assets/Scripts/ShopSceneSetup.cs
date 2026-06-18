@@ -9,7 +9,7 @@ public class ShopSceneSetup : MonoBehaviour
     {
         Camera cam = SetupCamera();
         EnsureEventSystem();
-        UIHelper.CreateArenaBackground(cam, 0.3f);
+        UIHelper.CreateArenaBackground(cam, 0.25f);
         BuildUI();
     }
 
@@ -25,13 +25,13 @@ public class ShopSceneSetup : MonoBehaviour
         cam.orthographic = true;
         cam.orthographicSize = 5;
         cam.transform.position = new Vector3(0, 0, -10);
-        cam.backgroundColor = new Color(0.06f, 0.04f, 0.03f);
+        cam.backgroundColor = new Color(0.05f, 0.05f, 0.08f);
         return cam;
     }
 
     void EnsureEventSystem()
     {
-        if (FindObjectOfType<EventSystem>() == null)
+        if (FindAnyObjectByType<EventSystem>() == null)
         {
             GameObject go = new GameObject("EventSystem");
             go.AddComponent<EventSystem>();
@@ -44,91 +44,78 @@ public class ShopSceneSetup : MonoBehaviour
         Canvas canvas = UIHelper.CreateCanvas();
         Transform ct = canvas.transform;
 
-        UIHelper.CreatePanel(ct, new Color(0, 0, 0, 0.7f));
+        UIHelper.CreatePanel(ct, new Color(0.02f, 0.02f, 0.02f, 0.85f));
 
-        // Title
+        // Sol Ust Title
         UIHelper.CreateText(ct, "Title", "THE ARMORY",
-            new Vector2(0, 480), 42, new Color(1f, 0.85f, 0.2f),
-            TextAlignmentOptions.Center, 600, 55);
+            new Vector2(-550, 450), 50, new Color(0.9f, 0.9f, 0.9f),
+            TextAlignmentOptions.Left, 600, 60);
 
-        // Gold
-        TextMeshProUGUI goldText = UIHelper.CreateText(ct, "GoldText", "",
-            new Vector2(0, 420), 34, new Color(1f, 0.85f, 0.2f),
-            TextAlignmentOptions.Center, 400, 45);
+        // Sag Ust Gold (Sari arkaplan ile)
+        TextMeshProUGUI goldText = UIHelper.CreateTextWithBG(ct, "GoldText", "",
+            new Vector2(650, 450), 32, new Color(1f, 0.85f, 0.2f),
+            TextAlignmentOptions.Right, 350, 50, 0.4f);
 
-        // Message
+        // Merkez Message
         TextMeshProUGUI messageText = UIHelper.CreateText(ct, "MessageText", "",
-            new Vector2(0, 370), 24, new Color(0.9f, 0.9f, 0.9f),
-            TextAlignmentOptions.Center, 700, 40);
+            new Vector2(0, 360), 28, new Color(1f, 0.4f, 0.4f),
+            TextAlignmentOptions.Center, 900, 40);
 
-        // Category layout
-        float infoX = -230f;
-        float btnX = 340f;
-        float startY = 290f;
-        float gap = 72f;
+        // Liste hizzalari
+        float headerX = -550f;
+        float infoX = -100f;
+        float btnX = 550f;
+        float startY = 240f;
+        float gap = 90f;
 
         Color headerWeapon = new Color(1f, 0.4f, 0.35f);
         Color headerArmor = new Color(0.4f, 0.65f, 1f);
         Color headerHelmet = new Color(0.4f, 0.9f, 0.9f);
         Color headerShield = new Color(0.4f, 0.9f, 0.4f);
         Color headerPotion = new Color(0.85f, 0.4f, 0.85f);
-        Color infoCol = new Color(0.85f, 0.85f, 0.85f);
+        Color infoCol = new Color(0.9f, 0.9f, 0.9f);
+        Color btnCol = new Color(0.15f, 0.15f, 0.2f); // Koyu butonlar
 
         // Weapon
-        UIHelper.CreateText(ct, "WeaponHeader", "WEAPON",
-            new Vector2(-420, startY + 12), 16, headerWeapon,
-            TextAlignmentOptions.Left, 120, 25);
-        TextMeshProUGUI weaponText = UIHelper.CreateText(ct, "WeaponText", "",
-            new Vector2(infoX, startY), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
-        RectTransform buyWeaponBtn = UIHelper.CreateButton(ct, "BuyWeaponBtn", "",
-            new Vector2(btnX, startY), new Vector2(320, 52), new Color(0.55f, 0.18f, 0.15f), 15);
+        UIHelper.CreateTextWithBG(ct, "Bg1", "", new Vector2(0, startY), 10, Color.clear, TextAlignmentOptions.Center, 1400, 75, 0.3f);
+        UIHelper.CreateText(ct, "WeaponHeader", "WEAPON", new Vector2(headerX, startY), 28, headerWeapon, TextAlignmentOptions.Left, 200, 40);
+        TextMeshProUGUI weaponText = UIHelper.CreateText(ct, "WeaponText", "", new Vector2(infoX, startY), 26, infoCol, TextAlignmentOptions.Left, 600, 40);
+        RectTransform buyWeaponBtn = UIHelper.CreateButton(ct, "BuyWeaponBtn", "", new Vector2(btnX, startY), new Vector2(250, 60), btnCol, 22);
 
         // Armor
-        UIHelper.CreateText(ct, "ArmorHeader", "ARMOR",
-            new Vector2(-420, startY - gap + 12), 16, headerArmor,
-            TextAlignmentOptions.Left, 120, 25);
-        TextMeshProUGUI armorText = UIHelper.CreateText(ct, "ArmorText", "",
-            new Vector2(infoX, startY - gap), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
-        RectTransform buyArmorBtn = UIHelper.CreateButton(ct, "BuyArmorBtn", "",
-            new Vector2(btnX, startY - gap), new Vector2(320, 52), new Color(0.15f, 0.3f, 0.55f), 15);
+        UIHelper.CreateTextWithBG(ct, "Bg2", "", new Vector2(0, startY - gap), 10, Color.clear, TextAlignmentOptions.Center, 1400, 75, 0.3f);
+        UIHelper.CreateText(ct, "ArmorHeader", "ARMOR", new Vector2(headerX, startY - gap), 28, headerArmor, TextAlignmentOptions.Left, 200, 40);
+        TextMeshProUGUI armorText = UIHelper.CreateText(ct, "ArmorText", "", new Vector2(infoX, startY - gap), 26, infoCol, TextAlignmentOptions.Left, 600, 40);
+        RectTransform buyArmorBtn = UIHelper.CreateButton(ct, "BuyArmorBtn", "", new Vector2(btnX, startY - gap), new Vector2(250, 60), btnCol, 22);
 
         // Helmet
-        UIHelper.CreateText(ct, "HelmetHeader", "HELMET",
-            new Vector2(-420, startY - gap * 2 + 12), 16, headerHelmet,
-            TextAlignmentOptions.Left, 120, 25);
-        TextMeshProUGUI helmetText = UIHelper.CreateText(ct, "HelmetText", "",
-            new Vector2(infoX, startY - gap * 2), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
-        RectTransform buyHelmetBtn = UIHelper.CreateButton(ct, "BuyHelmetBtn", "",
-            new Vector2(btnX, startY - gap * 2), new Vector2(320, 52), new Color(0.15f, 0.45f, 0.5f), 15);
+        UIHelper.CreateTextWithBG(ct, "Bg3", "", new Vector2(0, startY - gap * 2), 10, Color.clear, TextAlignmentOptions.Center, 1400, 75, 0.3f);
+        UIHelper.CreateText(ct, "HelmetHeader", "HELMET", new Vector2(headerX, startY - gap * 2), 28, headerHelmet, TextAlignmentOptions.Left, 200, 40);
+        TextMeshProUGUI helmetText = UIHelper.CreateText(ct, "HelmetText", "", new Vector2(infoX, startY - gap * 2), 26, infoCol, TextAlignmentOptions.Left, 600, 40);
+        RectTransform buyHelmetBtn = UIHelper.CreateButton(ct, "BuyHelmetBtn", "", new Vector2(btnX, startY - gap * 2), new Vector2(250, 60), btnCol, 22);
 
         // Shield
-        UIHelper.CreateText(ct, "ShieldHeader", "SHIELD",
-            new Vector2(-420, startY - gap * 3 + 12), 16, headerShield,
-            TextAlignmentOptions.Left, 120, 25);
-        TextMeshProUGUI shieldText = UIHelper.CreateText(ct, "ShieldText", "",
-            new Vector2(infoX, startY - gap * 3), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
-        RectTransform buyShieldBtn = UIHelper.CreateButton(ct, "BuyShieldBtn", "",
-            new Vector2(btnX, startY - gap * 3), new Vector2(320, 52), new Color(0.15f, 0.45f, 0.2f), 15);
+        UIHelper.CreateTextWithBG(ct, "Bg4", "", new Vector2(0, startY - gap * 3), 10, Color.clear, TextAlignmentOptions.Center, 1400, 75, 0.3f);
+        UIHelper.CreateText(ct, "ShieldHeader", "SHIELD", new Vector2(headerX, startY - gap * 3), 28, headerShield, TextAlignmentOptions.Left, 200, 40);
+        TextMeshProUGUI shieldText = UIHelper.CreateText(ct, "ShieldText", "", new Vector2(infoX, startY - gap * 3), 26, infoCol, TextAlignmentOptions.Left, 600, 40);
+        RectTransform buyShieldBtn = UIHelper.CreateButton(ct, "BuyShieldBtn", "", new Vector2(btnX, startY - gap * 3), new Vector2(250, 60), btnCol, 22);
 
         // Potion
-        UIHelper.CreateText(ct, "PotionHeader", "POTION",
-            new Vector2(-420, startY - gap * 4 + 12), 16, headerPotion,
-            TextAlignmentOptions.Left, 120, 25);
-        TextMeshProUGUI potionText = UIHelper.CreateText(ct, "PotionText", "",
-            new Vector2(infoX, startY - gap * 4), 21, infoCol, TextAlignmentOptions.Left, 500, 38);
-        RectTransform buyPotionBtn = UIHelper.CreateButton(ct, "BuyPotionBtn", "",
-            new Vector2(btnX, startY - gap * 4), new Vector2(320, 52), new Color(0.45f, 0.15f, 0.45f), 15);
+        UIHelper.CreateTextWithBG(ct, "Bg5", "", new Vector2(0, startY - gap * 4), 10, Color.clear, TextAlignmentOptions.Center, 1400, 75, 0.3f);
+        UIHelper.CreateText(ct, "PotionHeader", "POTION", new Vector2(headerX, startY - gap * 4), 28, headerPotion, TextAlignmentOptions.Left, 200, 40);
+        TextMeshProUGUI potionText = UIHelper.CreateText(ct, "PotionText", "", new Vector2(infoX, startY - gap * 4), 26, infoCol, TextAlignmentOptions.Left, 600, 40);
+        RectTransform buyPotionBtn = UIHelper.CreateButton(ct, "BuyPotionBtn", "", new Vector2(btnX, startY - gap * 4), new Vector2(250, 60), btnCol, 22);
 
         // Stats preview
-        TextMeshProUGUI statsPreviewText = UIHelper.CreateText(ct, "StatsPreview", "",
-            new Vector2(0, -140), 20, new Color(0.7f, 0.7f, 0.7f),
-            TextAlignmentOptions.Center, 900, 40);
+        TextMeshProUGUI statsPreviewText = UIHelper.CreateTextWithBG(ct, "StatsPreview", "",
+            new Vector2(0, -220), 24, new Color(0.8f, 0.8f, 0.8f),
+            TextAlignmentOptions.Center, 1200, 60, 0.6f);
 
-        // Fight button
-        RectTransform fightBtn = UIHelper.CreateButton(ct, "FightBtn", "GO TO ARENA!",
-            new Vector2(0, -230), new Vector2(320, 75), new Color(0.75f, 0.12f, 0.12f), 28);
+        // Fight button (En altta dev gibi)
+        RectTransform fightBtn = UIHelper.CreateButton(ct, "FightBtn", "ENTER ARENA",
+            new Vector2(0, -350), new Vector2(400, 80), new Color(0.8f, 0.1f, 0.1f), 32);
 
-        // ShopManager
+        // ShopManager ayarlamalari
         GameObject shopGo = new GameObject("ShopManager");
         ShopManager shop = shopGo.AddComponent<ShopManager>();
         shop.goldText = goldText;

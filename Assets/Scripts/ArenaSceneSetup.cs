@@ -7,9 +7,25 @@ public class ArenaSceneSetup : MonoBehaviour
 {
     void Awake()
     {
-        Camera cam = SetupCamera();
+        CleanOldObjects();
+        Camera mainCamera = SetupCamera();
         EnsureEventSystem();
-        CreateArena(cam);
+        CreateArena(mainCamera);
+    }
+
+    void CleanOldObjects()
+    {
+        Canvas oldCanvas = FindAnyObjectByType<Canvas>();
+        if (oldCanvas != null) Destroy(oldCanvas.gameObject);
+
+        GameObject oldPlayer = GameObject.Find("Player");
+        if (oldPlayer != null) Destroy(oldPlayer);
+
+        GameObject oldEnemy = GameObject.Find("Enemy");
+        if (oldEnemy != null) Destroy(oldEnemy);
+
+        GameObject oldEventSystem = GameObject.Find("EventSystem");
+        if (oldEventSystem != null) Destroy(oldEventSystem);
     }
 
     Camera SetupCamera()
@@ -17,9 +33,9 @@ public class ArenaSceneSetup : MonoBehaviour
         Camera cam = Camera.main;
         if (cam == null)
         {
-            GameObject go = new GameObject("Main Camera");
-            go.tag = "MainCamera";
-            cam = go.AddComponent<Camera>();
+            GameObject camObject = new GameObject("Main Camera");
+            camObject.tag = "MainCamera";
+            cam = camObject.AddComponent<Camera>();
         }
         cam.orthographic = true;
         cam.orthographicSize = 5;
@@ -30,11 +46,11 @@ public class ArenaSceneSetup : MonoBehaviour
 
     void EnsureEventSystem()
     {
-        if (FindObjectOfType<EventSystem>() == null)
+        if (FindAnyObjectByType<EventSystem>() == null)
         {
-            GameObject go = new GameObject("EventSystem");
-            go.AddComponent<EventSystem>();
-            go.AddComponent<StandaloneInputModule>();
+            GameObject eventSystemObject = new GameObject("EventSystem");
+            eventSystemObject.AddComponent<EventSystem>();
+            eventSystemObject.AddComponent<StandaloneInputModule>();
         }
     }
 
@@ -42,131 +58,120 @@ public class ArenaSceneSetup : MonoBehaviour
     {
         UIHelper.CreateArenaBackground(cam);
 
-        // Player
-        GameObject playerGo = new GameObject("Player");
-        SpriteRenderer playerSr = playerGo.AddComponent<SpriteRenderer>();
+        GameObject playerObject = new GameObject("Player");
+        SpriteRenderer playerSpriteRenderer = playerObject.AddComponent<SpriteRenderer>();
         Sprite playerSprite = UIHelper.LoadSprite("pngtree-gladiator-cartoon-fighting-png-image_6671245");
-        playerSr.sprite = playerSprite != null ? playerSprite : UIHelper.CreateSprite(new Color(0.3f, 0.5f, 0.9f));
-        playerSr.sortingOrder = 10;
-        PlayerGladiator player = playerGo.AddComponent<PlayerGladiator>();
+        playerSpriteRenderer.sprite = playerSprite != null ? playerSprite : UIHelper.CreateSprite(new Color(0.3f, 0.5f, 0.9f));
+        playerSpriteRenderer.sortingOrder = 10;
+        PlayerGladiator player = playerObject.AddComponent<PlayerGladiator>();
 
-        // Enemy
-        GameObject enemyGo = new GameObject("Enemy");
-        SpriteRenderer enemySr = enemyGo.AddComponent<SpriteRenderer>();
+        GameObject enemyObject = new GameObject("Enemy");
+        SpriteRenderer enemySpriteRenderer = enemyObject.AddComponent<SpriteRenderer>();
         Sprite enemySprite = UIHelper.LoadSprite("gladiator-clipart-xl");
-        enemySr.sprite = enemySprite != null ? enemySprite : UIHelper.CreateSprite(new Color(0.9f, 0.25f, 0.2f));
-        enemySr.sortingOrder = 10;
-        EnemyGladiator enemy = enemyGo.AddComponent<EnemyGladiator>();
+        enemySpriteRenderer.sprite = enemySprite != null ? enemySprite : UIHelper.CreateSprite(new Color(0.9f, 0.25f, 0.2f));
+        enemySpriteRenderer.sortingOrder = 10;
+        EnemyGladiator enemy = enemyObject.AddComponent<EnemyGladiator>();
 
         player.enemyGladiator = enemy;
         enemy.playerGladiator = player;
 
-        Canvas canvas = UIHelper.CreateCanvas();
-        BuildCombatUI(canvas.transform, player, enemy);
+        Canvas uiCanvas = UIHelper.CreateCanvas();
+        BuildCombatUI(uiCanvas.transform, player, enemy);
     }
 
-    void BuildCombatUI(Transform ct, PlayerGladiator player, EnemyGladiator enemy)
+    void BuildCombatUI(Transform canvasTransform, PlayerGladiator player, EnemyGladiator enemy)
     {
-        // Top bar - texts with dark backgrounds
-        TextMeshProUGUI waveText = UIHelper.CreateTextWithBG(ct, "WaveText", "",
+        TextMeshProUGUI waveText = UIHelper.CreateTextWithBG(canvasTransform, "WaveText", "",
             new Vector2(0, 500), 36, new Color(1f, 0.85f, 0.2f),
             TextAlignmentOptions.Center, 500, 50, 0.92f);
 
-        TextMeshProUGUI playerHp = UIHelper.CreateTextWithBG(ct, "PlayerHP", "",
+        TextMeshProUGUI playerHpText = UIHelper.CreateTextWithBG(canvasTransform, "PlayerHP", "",
             new Vector2(-700, 450), 28, new Color(0.2f, 0.9f, 0.2f),
             TextAlignmentOptions.Left, 380, 40, 0.9f);
 
-        TextMeshProUGUI playerEn = UIHelper.CreateTextWithBG(ct, "PlayerEnergy", "",
+        TextMeshProUGUI playerEnergyText = UIHelper.CreateTextWithBG(canvasTransform, "PlayerEnergy", "",
             new Vector2(-700, 405), 24, new Color(0.2f, 0.9f, 0.9f),
             TextAlignmentOptions.Left, 380, 40, 0.9f);
 
-        TextMeshProUGUI enemyName = UIHelper.CreateTextWithBG(ct, "EnemyName", "",
+        TextMeshProUGUI enemyNameText = UIHelper.CreateTextWithBG(canvasTransform, "EnemyName", "",
             new Vector2(700, 450), 28, Color.white,
             TextAlignmentOptions.Right, 420, 40, 0.9f);
 
-        TextMeshProUGUI enemyHp = UIHelper.CreateTextWithBG(ct, "EnemyHP", "",
+        TextMeshProUGUI enemyHpText = UIHelper.CreateTextWithBG(canvasTransform, "EnemyHP", "",
             new Vector2(700, 405), 24, new Color(1f, 0.3f, 0.3f),
             TextAlignmentOptions.Right, 420, 40, 0.9f);
 
-        TextMeshProUGUI distText = UIHelper.CreateTextWithBG(ct, "Distance", "",
+        TextMeshProUGUI distanceText = UIHelper.CreateTextWithBG(canvasTransform, "Distance", "",
             new Vector2(0, 440), 22, new Color(0.9f, 0.9f, 0.9f),
             TextAlignmentOptions.Center, 300, 40, 0.9f);
 
-        // Action log - moved above gladiators
-        TextMeshProUGUI actionLog = UIHelper.CreateTextWithBG(ct, "ActionLog", "",
+        TextMeshProUGUI actionLogText = UIHelper.CreateTextWithBG(canvasTransform, "ActionLog", "",
             new Vector2(0, 340), 28, new Color(1f, 0.9f, 0.3f),
             TextAlignmentOptions.Center, 900, 55, 0.92f);
 
-        // Game over
-        TextMeshProUGUI gameOver = UIHelper.CreateTextWithBG(ct, "GameOver", "",
-            new Vector2(0, 50), 58, Color.red,
-            TextAlignmentOptions.Center, 800, 80, 0.92f);
+        TextMeshProUGUI gameOverText = UIHelper.CreateTextWithBG(canvasTransform, "GameOver", "",
+            new Vector2(0, 160), 58, Color.red,
+            TextAlignmentOptions.Center, 700, 100, 0.92f);
 
-        // Button area background
-        GameObject btnBgGo = new GameObject("ButtonAreaBG");
-        btnBgGo.transform.SetParent(ct, false);
-        RectTransform btnBgRect = btnBgGo.AddComponent<RectTransform>();
-        btnBgRect.anchoredPosition = new Vector2(0, -375);
-        btnBgRect.sizeDelta = new Vector2(1920, 220);
-        Image btnBgImg = btnBgGo.AddComponent<Image>();
-        btnBgImg.color = new Color(0, 0, 0, 0.88f);
-        btnBgImg.raycastTarget = false;
+        GameObject buttonBgObject = new GameObject("ButtonAreaBG");
+        buttonBgObject.transform.SetParent(canvasTransform, false);
+        RectTransform buttonBgRect = buttonBgObject.AddComponent<RectTransform>();
+        buttonBgRect.anchoredPosition = new Vector2(0, -380);
+        buttonBgRect.sizeDelta = new Vector2(1920, 200);
+        Image buttonBgImage = buttonBgObject.AddComponent<Image>();
+        buttonBgImage.color = new Color(0, 0, 0, 0.88f);
+        buttonBgImage.raycastTarget = false;
 
-        // Action buttons - Row 1 (moved lower)
-        Color red = new Color(0.75f, 0.12f, 0.12f);
-        Color darkRed = new Color(0.55f, 0.08f, 0.08f);
-        Color blue = new Color(0.15f, 0.35f, 0.75f);
-        Color purple = new Color(0.55f, 0.15f, 0.75f);
-        Color green = new Color(0.15f, 0.6f, 0.25f);
-        Color teal = new Color(0.15f, 0.5f, 0.55f);
-        Color yellow = new Color(0.95f, 0.85f, 0.15f);
-        Color orange = new Color(0.95f, 0.5f, 0.05f);
+        Color redColor = new Color(0.75f, 0.12f, 0.12f);
+        Color darkRedColor = new Color(0.55f, 0.08f, 0.08f);
+        Color blueColor = new Color(0.15f, 0.35f, 0.75f);
+        Color purpleColor = new Color(0.55f, 0.15f, 0.75f);
+        Color greenColor = new Color(0.15f, 0.6f, 0.25f);
+        Color tealColor = new Color(0.15f, 0.5f, 0.55f);
+        Color yellowColor = new Color(0.95f, 0.85f, 0.15f);
+        Color orangeColor = new Color(0.95f, 0.5f, 0.05f);
 
-        RectTransform atkBtn = UIHelper.CreateButton(ct, "AttackBtn", "ATTACK",
-            new Vector2(-250, -340), new Vector2(155, 62), red);
-        RectTransform hvyBtn = UIHelper.CreateButton(ct, "HeavyBtn", "HEAVY ATK",
-            new Vector2(-85, -340), new Vector2(155, 62), darkRed);
-        RectTransform tntBtn = UIHelper.CreateButton(ct, "TauntBtn", "TAUNT",
-            new Vector2(85, -340), new Vector2(155, 62), purple);
-        RectTransform defBtn = UIHelper.CreateButton(ct, "DefendBtn", "DEFEND",
-            new Vector2(250, -340), new Vector2(155, 62), blue);
+        RectTransform attackButton = UIHelper.CreateButton(canvasTransform, "AttackBtn", "ATTACK",
+            new Vector2(-250, -335), new Vector2(155, 62), redColor);
+        RectTransform heavyButton = UIHelper.CreateButton(canvasTransform, "HeavyBtn", "HEAVY ATK",
+            new Vector2(-85, -335), new Vector2(155, 62), darkRedColor);
+        RectTransform tauntButton = UIHelper.CreateButton(canvasTransform, "TauntBtn", "TAUNT",
+            new Vector2(85, -335), new Vector2(155, 62), purpleColor);
+        RectTransform defendButton = UIHelper.CreateButton(canvasTransform, "DefendBtn", "DEFEND",
+            new Vector2(250, -335), new Vector2(155, 62), blueColor);
 
-        // Row 2
-        RectTransform mlBtn = UIHelper.CreateButton(ct, "MoveLeftBtn", "< MOVE",
-            new Vector2(-250, -415), new Vector2(155, 62), teal);
-        RectTransform rstBtn = UIHelper.CreateButton(ct, "RestBtn", "REST",
-            new Vector2(-85, -415), new Vector2(155, 62), green);
-        RectTransform potBtn = UIHelper.CreateButton(ct, "PotionBtn", "POTION",
-            new Vector2(85, -415), new Vector2(155, 62), green);
-        RectTransform mrBtn = UIHelper.CreateButton(ct, "MoveRightBtn", "MOVE >",
-            new Vector2(250, -415), new Vector2(155, 62), teal);
+        RectTransform moveLeftButton = UIHelper.CreateButton(canvasTransform, "MoveLeftBtn", "< MOVE",
+            new Vector2(-250, -415), new Vector2(155, 62), tealColor);
+        RectTransform restButton = UIHelper.CreateButton(canvasTransform, "RestBtn", "REST",
+            new Vector2(-85, -415), new Vector2(155, 62), greenColor);
+        RectTransform potionButton = UIHelper.CreateButton(canvasTransform, "PotionBtn", "POTION",
+            new Vector2(85, -415), new Vector2(155, 62), greenColor);
+        RectTransform moveRightButton = UIHelper.CreateButton(canvasTransform, "MoveRightBtn", "MOVE >",
+            new Vector2(250, -415), new Vector2(155, 62), tealColor);
 
-        // End buttons
-        RectTransform restartBtn = UIHelper.CreateButton(ct, "RestartBtn", "RESTART",
-            new Vector2(-130, -200), new Vector2(220, 65), yellow, 24);
-        RectTransform nextBtn = UIHelper.CreateButton(ct, "NextWaveBtn", "NEXT WAVE",
-            new Vector2(130, -200), new Vector2(250, 65), orange, 24);
+        RectTransform restartButton = UIHelper.CreateButton(canvasTransform, "RestartBtn", "RESTART",
+            new Vector2(-130, 160), new Vector2(220, 65), yellowColor, 24);
+        RectTransform nextWaveButton = UIHelper.CreateButton(canvasTransform, "NextWaveBtn", "NEXT WAVE",
+            new Vector2(130, 160), new Vector2(250, 65), orangeColor, 24);
 
-        // Wire player
-        player.playerHealthText = playerHp;
-        player.playerEnergyText = playerEn;
-        player.actionLogText = actionLog;
-        player.gameOverText = gameOver;
+        player.playerHealthText = playerHpText;
+        player.playerEnergyText = playerEnergyText;
+        player.actionLogText = actionLogText;
+        player.gameOverText = gameOverText;
         player.waveText = waveText;
-        player.distanceText = distText;
-        player.attackButtonTransform = atkBtn;
-        player.heavyAttackButtonTransform = hvyBtn;
-        player.tauntButtonTransform = tntBtn;
-        player.defendButtonTransform = defBtn;
-        player.moveLeftButtonTransform = mlBtn;
-        player.moveRightButtonTransform = mrBtn;
-        player.restButtonTransform = rstBtn;
-        player.usePotionButtonTransform = potBtn;
-        player.restartButtonTransform = restartBtn;
-        player.nextWaveButtonTransform = nextBtn;
+        player.distanceText = distanceText;
+        player.attackButtonTransform = attackButton;
+        player.heavyAttackButtonTransform = heavyButton;
+        player.tauntButtonTransform = tauntButton;
+        player.defendButtonTransform = defendButton;
+        player.moveLeftButtonTransform = moveLeftButton;
+        player.moveRightButtonTransform = moveRightButton;
+        player.restButtonTransform = restButton;
+        player.usePotionButtonTransform = potionButton;
+        player.restartButtonTransform = restartButton;
+        player.nextWaveButtonTransform = nextWaveButton;
 
-        // Wire enemy
-        enemy.enemyHealthText = enemyHp;
-        enemy.enemyNameText = enemyName;
+        enemy.enemyHealthText = enemyHpText;
+        enemy.enemyNameText = enemyNameText;
     }
 }

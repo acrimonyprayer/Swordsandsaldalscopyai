@@ -98,24 +98,15 @@ public class PlayerGladiator : MonoBehaviour
 
     void SetupUI()
     {
-        Color red = new Color(0.8f, 0.15f, 0.15f);
-        Color darkRed = new Color(0.6f, 0.1f, 0.1f);
-        Color blue = new Color(0.2f, 0.4f, 0.8f);
-        Color purple = new Color(0.6f, 0.2f, 0.8f);
-        Color green = new Color(0.2f, 0.7f, 0.3f);
-        Color teal = new Color(0.2f, 0.6f, 0.6f);
-        Color yellow = new Color(1f, 0.9f, 0.2f);
-        Color orange = new Color(1f, 0.5f, 0f);
+        SetupButton(attackButtonTransform, PlayerAttack);
+        SetupButton(heavyAttackButtonTransform, PlayerHeavyAttack);
+        SetupButton(tauntButtonTransform, PlayerTaunt);
+        SetupButton(defendButtonTransform, PlayerDefend);
 
-        SetupButton(attackButtonTransform, "ATTACK", new Vector2(-250, -220), red, PlayerAttack);
-        SetupButton(heavyAttackButtonTransform, "HEAVY ATK", new Vector2(-85, -220), darkRed, PlayerHeavyAttack);
-        SetupButton(tauntButtonTransform, "TAUNT", new Vector2(85, -220), purple, PlayerTaunt);
-        SetupButton(defendButtonTransform, "DEFEND", new Vector2(250, -220), blue, PlayerDefend);
-
-        SetupButton(moveLeftButtonTransform, "< MOVE", new Vector2(-250, -300), teal, MoveLeft);
-        SetupButton(restButtonTransform, "REST", new Vector2(-85, -300), green, PlayerRest);
-        SetupButton(usePotionButtonTransform, "POTION x" + healthPotions, new Vector2(85, -300), green, UsePotion);
-        SetupButton(moveRightButtonTransform, "MOVE >", new Vector2(250, -300), teal, MoveRight);
+        SetupButton(moveLeftButtonTransform, MoveLeft);
+        SetupButton(restButtonTransform, PlayerRest);
+        SetupButton(usePotionButtonTransform, UsePotion);
+        SetupButton(moveRightButtonTransform, MoveRight);
 
         if (playerHealthText != null) playerHealthText.color = new Color(0.2f, 0.9f, 0.2f);
         if (playerEnergyText != null) playerEnergyText.color = new Color(0.2f, 0.9f, 0.9f);
@@ -127,51 +118,24 @@ public class PlayerGladiator : MonoBehaviour
 
         if (restartButtonTransform != null)
         {
-            restartButtonTransform.anchoredPosition = new Vector2(-120, -120);
-            restartButtonTransform.sizeDelta = new Vector2(200, 60);
-            restartButtonTransform.GetComponent<Image>().color = yellow;
-            SetButtonText(restartButtonTransform, "RESTART", 24, Color.black);
             restartButtonTransform.gameObject.SetActive(false);
-
             Button restartBtn = restartButtonTransform.GetComponent<Button>();
             if (restartBtn != null) restartBtn.onClick.AddListener(RestartGame);
         }
 
         if (nextWaveButtonTransform != null)
         {
-            nextWaveButtonTransform.anchoredPosition = new Vector2(120, -120);
-            nextWaveButtonTransform.sizeDelta = new Vector2(240, 60);
-            nextWaveButtonTransform.GetComponent<Image>().color = orange;
-            SetButtonText(nextWaveButtonTransform, "NEXT WAVE", 24, Color.white);
             nextWaveButtonTransform.gameObject.SetActive(false);
-
             Button nextBtn = nextWaveButtonTransform.GetComponent<Button>();
             if (nextBtn != null) nextBtn.onClick.AddListener(StartNextWave);
         }
     }
 
-    void SetupButton(RectTransform rect, string label, Vector2 pos, Color col, UnityEngine.Events.UnityAction action)
+    void SetupButton(RectTransform rect, UnityEngine.Events.UnityAction action)
     {
         if (rect == null) return;
-        rect.anchoredPosition = pos;
-        rect.sizeDelta = new Vector2(150, 60);
-        rect.GetComponent<Image>().color = col;
-        SetButtonText(rect, label, 18, Color.white);
-
         Button btn = rect.GetComponent<Button>();
         if (btn != null) btn.onClick.AddListener(action);
-    }
-
-    void SetButtonText(RectTransform rect, string label, int size, Color col)
-    {
-        TextMeshProUGUI t = rect.GetComponentInChildren<TextMeshProUGUI>();
-        if (t != null)
-        {
-            t.text = label;
-            t.fontSize = size;
-            t.fontStyle = FontStyles.Bold;
-            t.color = col;
-        }
     }
 
     public void PlayerAttack()
